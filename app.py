@@ -1,6 +1,5 @@
 
 
-
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -8,14 +7,11 @@ import time
 from PIL import Image
 import io
 import base64
-import requests
-import os
-from requests.adapters import HTTPAdapter, Retry
-import socket # DNS çözümleme için yeni kütüphane
+from huggingface_hub import InferenceClient
 
 # Sayfa Ayarları
 st.set_page_config(
-    page_title="Berko AI | Medya & Müzik Stüdyosu",
+    page_title="Berko AI | Babadır",
     page_icon="🧑‍💻",
     layout="centered"
 )
@@ -49,7 +45,7 @@ with st.sidebar:
     st.divider()
     st.write("Sohbet: Groq Llama 3.3 70B")
     st.write("Görsel: Flux Realism")
-    st.write("Müzik: Hugging Face MusicGen (Stabil)")
+    st.write("Müzik: Hugging Face MusicGen (InferenceClient)")
 
 # --- ANA SOHBET EKRANI ---
 st.title("🧑‍💻 Berko ile Sohbet, Çizim & Müzik Yap")
@@ -151,7 +147,6 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik 
                     berko_yaniti = chat_completion.choices[0].message.content
                     
                     if is_music_request:
-                        # MÜZİK ÜRETİM MODU (GÜÇLENDİRİLMİŞ DNS ÇÖZÜMLEME İLE)
                         muzik_baslangici = f"Kulaklıkla dinlemelik harika bir parça kurguluyorum kanka: '{prompt}'"
                         st.markdown(muzik_baslangici)
                         
@@ -173,49 +168,28 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik 
                         ingilizce_music_prompt = cevirici_istegi.choices[0].message.content.strip()
                         st.info(f"Müzik Tarzı Belirlendi: {ingilizce_music_prompt}")
                         
-                        # --- YENİ GÜÇLENDİRİLMİŞ HUGGING FACE İSTEĞİ ---
-                        API_URL = "https://api-inference.huggingface.co/models/facebook/musicgen-large"
-                        
-                        # HATA YÖNETİMİ VE YENİDEN DENEME (RETRY) STRATEJİSİ
-                        retry_strategy = Retry(
-                            total=3,
-                            backoff_factor=1,
-                            status_forcelist=[500, 502, 503, 504],
-                            allowed_methods=["POST"]
-                        )
-                        adapter = HTTPAdapter(max_retries=retry_strategy)
-                        
-                        # Streamlit ortamında bazen DNS hataları için socket ayarı gerekir
-                        try:
-                            socket.getaddrinfo("api-inference.huggingface.co", 80)
-                        except socket.gaierror:
-                            st.warning("DNS çözümleme sorunu algılandı, bağlantı yeniden deneniyor...")
-
-                        with st.session_state.get('huggingface_session', requests.Session()) as session:
-                            session.mount("https://", adapter)
-                            session.headers = {"Authorization": f"Bearer {hf_api_key}"}
-                            
-                            with st.spinner("Berko notaları birleştiriyor, bu işlem 30-60 saniye sürebilir..."):
-                                try:
-                                    response = session.post(API_URL, json={
-                                        "inputs": ingilizce_music_prompt,
-                                        "parameters": {"max_new_tokens": 512}
-                                    }, timeout=90) # Uzun zaman aşımı
+                        # --- HUGGING FACE RESMİ KÜTÜPHANESİ İLE BAĞLANTI (DNS HATASIZ ÇÖZÜM) ---
+                        with st.spinner("Berko notaları birleştiriyor, bu işlem 30-60 saniye sürebilir..."):
+                            try:
+                                client_hf = InferenceClient(token=hf_api_key)
+                                
+                                # text_to_audio fonksiyonu Hugging Face Hub kütüphanesinin yerleşik ve en kararlı yoludur
+                                audio_bytes = client_hf.text_to_audio(
+                                    text=ingilizce_music_prompt,
+                                    model="facebook/musicgen-large"
+                                )
+                                
+                                if audio_bytes:
+                                    st.success("✨ İşte müzik eseri! Aşağıdan dinleyip indirebilirsin.")
+                                    st.audio(audio_bytes, format="audio/wav")
                                     
-                                    if response.status_code == 200:
-                                        audio_bytes = response.content
-                                        st.success("✨ İşte müzik eseri! Aşağıdan dinleyip indirebilirsin.")
-                                        st.audio(audio_bytes, format="audio/wav")
-                                        
-                                        st.session_state.berko_messages.append({"role": "assistant", "content": muzik_baslangici})
-                                        st.session_state.berko_display.append({"role": "assistant", "content": audio_bytes, "type": "audio", "caption": f"Berko'nun Eseri: {prompt}"})
-                                    else:
-                                        st.error(f"Müzik üretilemedi. Hata Kodu: {response.status_code}. Mesaj: {response.text}")
-                                        
-                                except requests.exceptions.ConnectionError:
-                                    st.error("Bağlantı Hatası veya DNS Çözümleme Hatası oluştu. Lütfen sayfayı yenileyip tekrar dene kanka.")
-                                except Exception as e:
-                                    st.error(f"Müzik isteği sırasında beklenmeyen hata: {e}")
+                                    st.session_state.berko_messages.append({"role": "assistant", "content": muzik_baslangici})
+                                    st.session_state.berko_display.append({"role": "assistant", "content": audio_bytes, "type": "audio", "caption": f"Berko'nun Eseri: {prompt}"})
+                                else:
+                                    st.error("Müzik verisi boş döndü kanka.")
+                                    
+                            except Exception as e:
+                                st.error(f"Müzik üretilirken hata oluştu: {e}")
                         
                     elif is_image_request:
                         harika_yanit = f"Hemen patlatıyorum kanka! İstediğin konsepti üst düzey kaliteye taşıyorum: '{prompt}'"
