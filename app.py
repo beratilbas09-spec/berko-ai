@@ -1,4 +1,5 @@
 
+
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -31,8 +32,8 @@ with st.sidebar:
         if st.button("Çıkış Yap", use_container_width=True):
             st.session_state.logged_in = False
             st.session_state.user_email = None
-            st.session_state.messages = [] 
-            st.session_state.display_messages = []
+            st.session_state.berko_messages = [] 
+            st.session_state.berko_display = []
             st.rerun()
             
     st.divider()
@@ -51,21 +52,20 @@ if not groq_api_key:
 
 client = Groq(api_key=groq_api_key)
 
-# 1. Groq'a giden saf metin geçmişi (Modelin kafası karışmasın diye)
-if "messages" not in st.session_state:
-    st.session_state.messages = [
+# Yepyeni ve temiz hafıza anahtarları kullanıyoruz (Eski hatalı verilerden eser kalmasın)
+if "berko_messages" not in st.session_state:
+    st.session_state.berko_messages = [
         {
             "role": "system",
             "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek bir AI asistanısın. Kullanıcı senden resim yapmanı istediğinde sadece kısa bir cümle kur ve ardından kesinlikle şu formatta resmi belirt: [RESİM: ingilizce_resim_aciklamasi]. Örnek: [RESİM: a cute cat playing guitar]. Başka hiçbir şey yazma."
         }
     ]
 
-# 2. Ekranda gösterilecek görsel/metin geçmişi (Kullanıcıya resimleri göstermek için)
-if "display_messages" not in st.session_state:
-    st.session_state.display_messages = []
+if "berko_display" not in st.session_state:
+    st.session_state.berko_display = []
 
 # Ekrana Geçmiş Mesajları Yazdır
-for message in st.session_state.display_messages:
+for message in st.session_state.berko_display:
     with st.chat_message(message["role"]):
         if message.get("type") == "image":
             st.image(message["content"], caption="Berko'nun Eseri")
@@ -74,9 +74,8 @@ for message in st.session_state.display_messages:
 
 # Kullanıcıdan Mesaj Al
 if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
-    # Kullanıcı mesajını her iki geçmişe de ekle
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    st.session_state.display_messages.append({"role": "user", "content": prompt})
+    st.session_state.berko_messages.append({"role": "user", "content": prompt})
+    st.session_state.berko_display.append({"role": "user", "content": prompt})
     
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -86,7 +85,7 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
             try:
                 chat_completion = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
-                    messages=st.session_state.messages,
+                    messages=st.session_state.berko_messages,
                     temperature=0.7,
                 )
                 berko_yaniti = chat_completion.choices[0].message.content
@@ -102,7 +101,7 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
                         
                         if temiz_yanit:
                             st.markdown(temiz_yanit)
-                            st.session_state.display_messages.append({"role": "assistant", "content": temiz_yanit})
+                            st.session_state.berko_display.append({"role": "assistant", "content": temiz_yanit})
                         
                         # Pollinations AI resim URL'si
                         encoded_prompt = urllib.parse.quote(resim_promptu)
@@ -111,14 +110,12 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
                         st.image(image_url, caption=f"Berko'nun Eseri: {resim_promptu}")
                         st.info("💡 Resmi kaydetmek için resmin üzerine sağ tıklayıp 'Resmi Farklı Kaydet' diyebilirsin.")
                         
-                        # Groq'un kafası karışmasın diye hafızaya sadece metinsel yanıtı ekliyoruz
-                        st.session_state.messages.append({"role": "assistant", "content": berko_yaniti})
-                        # Ekranda resim gözüksün diye display listesine ekliyoruz
-                        st.session_state.display_messages.append({"role": "assistant", "content": image_url, "type": "image"})
+                        st.session_state.berko_messages.append({"role": "assistant", "content": berko_yaniti})
+                        st.session_state.berko_display.append({"role": "assistant", "content": image_url, "type": "image"})
                 else:
                     st.markdown(berko_yaniti)
-                    st.session_state.messages.append({"role": "assistant", "content": berko_yaniti})
-                    st.session_state.display_messages.append({"role": "assistant", "content": berko_yaniti})
+                    st.session_state.berko_messages.append({"role": "assistant", "content": berko_yaniti})
+                    st.session_state.berko_display.append({"role": "assistant", "content": berko_yaniti})
                     
             except Exception as e:
                 st.error(f"Hata oluştu: {e}")
