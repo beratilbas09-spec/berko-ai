@@ -1,12 +1,11 @@
 
 import streamlit as st
 from groq import Groq
-from google import genai
-import base64
+import urllib.parse
 
 # Sayfa Ayarları
 st.set_page_config(
-    page_title="Berko AI | Babadır",
+    page_title="Berko AI | Resimli",
     page_icon="🧑‍💻",
 )
 
@@ -36,25 +35,17 @@ with st.sidebar:
             st.rerun()
             
     st.divider()
-    st.write("Sohbet: Groq | Resim: Google GenAI")
+    st.write("Sohbet: Groq | Resim: Ücretsiz Motor")
 
 # --- ANA SOHBET EKRANI ---
 st.title("🧑‍💻 Berko ile Sohbet Et")
 st.write("Kanka selam, ben Berko! Naber, ne konuşuyoruz?")
 
-# API Anahtarlarını Kontrol Et
+# API Anahtarını Kontrol Et
 groq_api_key = st.secrets.get("GROQ_API_KEY")
-gemini_api_key = st.secrets.get("GEMINI_API_KEY")
 
-if not groq_api_key or not gemini_api_key:
-    st.error("API anahtarları eksik! Streamlit Secrets'a GROQ_API_KEY ve GEMINI_API_KEY eklediğinden emin ol.")
-    st.stop()
-
-# İstemciyi Başlat (Hata vermemesi için API anahtarını doğru veriyoruz)
-try:
-    google_client = genai.Client(api_key=gemini_api_key)
-except Exception as e:
-    st.error(f"Google istemcisi başlatılamadı: {e}")
+if not groq_api_key:
+    st.error("GROQ_API_KEY bulunamadı! Streamlit Secrets'a ekle.")
     st.stop()
 
 client = Groq(api_key=groq_api_key)
@@ -69,19 +60,12 @@ if "messages" not in st.session_state:
     ]
 
 # Geçmiş Mesajları Ekrana Yazdır
-for i, message in enumerate(st.session_state.messages):
+for message in st.session_state.messages:
     if message["role"] != "system":
         with st.chat_message(message["role"]):
             if message.get("type") == "image":
-                img_bytes = message["content"]
-                st.image(img_bytes, caption="Berko'nun Eseri")
-                st.download_button(
-                    label="📥 Resmi Bilgisayara İndir",
-                    data=img_bytes,
-                    file_name="berko_resim.png",
-                    mime="image/png",
-                    key=f"hist_dl_{i}"
-                )
+                image_url = message["content"]
+                st.image(image_url, caption="Berko'nun Eseri")
             else:
                 st.markdown(message["content"])
 
@@ -114,36 +98,17 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
                             st.markdown(temiz_yanit)
                             st.session_state.messages.append({"role": "assistant", "content": temiz_yanit})
                         
-                        # --- GÜNCEL GOOGLE IMAGE MODELI ---
-                        # Şu an aktif olan doğru model ismi: 'imagen-3.0-generate-002'
-                        with st.spinner("Google Imagen 3.0 çiziyor..."):
-                            result = google_client.models.generate_images(
-                                model='imagen-3.0-generate-002',
-                                prompt=resim_promptu,
-                                config=dict(number_of_images=1, output_mime_type="image/png")
-                            )
-                            
-                        for generated_image in result.generated_images:
-                            img_bytes = generated_image.image.image_bytes
-                            
-                            st.image(img_bytes, caption=f"Berko'nun Eseri: {resim_promptu}")
-                            st.download_button(
-                                label="📥 Resmi Bilgisayara İndir",
-                                data=img_bytes,
-                                file_name="berko_resim.png",
-                                mime="image/png",
-                                key="new_img_dl"
-                            )
-                            
-                            st.session_state.messages.append({
-                                "role": "assistant", 
-                                "content": img_bytes, 
-                                "type": "image"
-                            })
+                        # Pollinations AI'ın en kararlı ve bozulmayan uç noktası (Flux modeli)
+                        encoded_prompt = urllib.parse.quote(resim_promptu)
+                        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true"
+                        
+                        st.image(image_url, caption=f"Berko'nun Eseri: {resim_promptu}")
+                        st.info("💡 Resmi kaydetmek için resmin üzerine sağ tıklayıp 'Resmi Farklı Kaydet' diyebilirsin.")
+                        
+                        st.session_state.messages.append({"role": "assistant", "content": image_url, "type": "image"})
                 else:
                     st.markdown(berko_yaniti)
                     st.session_state.messages.append({"role": "assistant", "content": berko_yaniti})
                     
             except Exception as e:
                 st.error(f"Hata oluştu: {e}")
-                st.info("Eğer bu hata devam ederse Google AI Studio API kotası dolmuş olabilir.")
