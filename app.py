@@ -57,7 +57,7 @@ if "berko_messages" not in st.session_state:
     st.session_state.berko_messages = [
         {
             "role": "system",
-            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek bir AI asistanısın. Kullanıcı sohbet etmek istediğinde sadece normal bir insan gibi sohbet et. Asla durduk yere resim üretmeye çalışama."
+            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek bir AI asistanısın. Kullanıcı senden resim yapmanı istediğinde ona kanka gibi laf sokarak veya gaz vererek eşlik et."
         }
     ]
 
@@ -81,11 +81,14 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
         st.markdown(prompt)
         
     with st.chat_message("assistant"):
-        with st.spinner("Berko düşünüyor..."):
+        with st.spinner("Berko düşünüyor ve çiziyor..."):
             try:
-                # Kullanıcı resim kelimesi geçirmiş mi kontrol edelim
-                resim_kelimeleri = ["resim yap", "çiz", "görsel oluştur", "resmet", "fotoğrafını yap", "oluştur"]
-                is_image_request = any(kelime in prompt.lower() for kelime in resim_kelimeleri)
+                # Yazım hatalarını da yakalamak için geniş bir kelime taraması yapıyoruz
+                resim_kokenleri = ["resim", "resiam", "rsim", "resm", "çiz", "ciz", "görsel", "gorsel", "foto", "fotograf", "oluştur", "yap"]
+                prompt_lower = prompt.lower()
+                
+                # Eğer kullanıcı mesajında resim ile ilgili bir kök kelime varsa direkt resim modunu açıyoruz
+                is_image_request = any(koken in prompt_lower for koken in resim_kokenleri)
                 
                 chat_completion = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
@@ -94,21 +97,21 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
                 )
                 berko_yaniti = chat_completion.choices[0].message.content
                 
-                # Eğer kullanıcı gerçekten resim istemişse resmi bas, istemediyse sadece normal sohbet etsin
                 if is_image_request:
-                    st.markdown(berko_yaniti)
-                    st.session_state.berko_display.append({"role": "assistant", "content": berko_yaniti})
+                    # LLaMA saçmalasa bile biz kendi havalı yanıtımızı basalım
+                    harika_yanit = f"Hemen patlatıyorum kanka! Sanat konuşturuyoruz: '{prompt}'"
+                    st.markdown(harika_yanit)
+                    st.session_state.berko_display.append({"role": "assistant", "content": harika_yanit})
                     
-                    # İngilizce prompt çevirisi için ufak bir özet alalım veya kullanıcının promptunu kullanalım
-                    resim_promptu = prompt
-                    encoded_prompt = urllib.parse.quote(resim_promptu)
+                    # Pollinations AI resim URL'si
+                    encoded_prompt = urllib.parse.quote(prompt)
                     image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true"
                     
-                    st.image(image_url, caption=f"Berko'nun Eseri: {resim_promptu}")
+                    st.image(image_url, caption=f"Berko'nun Eseri: {prompt}")
                     st.info("💡 Resmi kaydetmek için resmin üzerine sağ tıklayıp 'Resmi Farklı Kaydet' diyebilirsin.")
                     
-                    st.session_state.berko_messages.append({"role": "assistant", "content": berko_yaniti})
-                    st.session_state.berko_display.append({"role": "assistant", "content": image_url, "type": "image", "caption": f"Berko'nun Eseri: {resim_promptu}"})
+                    st.session_state.berko_messages.append({"role": "assistant", "content": harika_yanit})
+                    st.session_state.berko_display.append({"role": "assistant", "content": image_url, "type": "image", "caption": f"Berko'nun Eseri: {prompt}"})
                 else:
                     # Normal sohbet
                     st.markdown(berko_yaniti)
