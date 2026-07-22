@@ -1,6 +1,5 @@
-
 streamlit
 groq
+google-generativeai
 pillow
 requests
-huggingface_hub
