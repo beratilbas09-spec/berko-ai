@@ -1,4 +1,5 @@
 
+i
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -124,7 +125,7 @@ if "berko_messages" not in st.session_state:
 if "berko_display" not in st.session_state:
     st.session_state.berko_display = []
 
-# --- AKILLI BAŞLIK (Sadece hiç mesaj atılmadıysa görünür ve mesaj atılınca tamamen kaybolur) ---
+# --- AKILLI BAŞLIK (Sadece hiç mesaj atılmadıysa görünür) ---
 if len(st.session_state.berko_display) == 0:
     st.title("Berko AI Stüdyosu")
     st.write("Kanka selam! Sana nasıl yardımcı olabilirim? Bir şeyler sor, kod yazdıralım veya görsel çizdirelim.")
@@ -138,29 +139,6 @@ if not groq_api_key:
 
 client = Groq(api_key=groq_api_key)
 
-# --- CHAT ALANI ÜSTÜNDE TEMİZ EXPANDER (ARTI MENÜSÜ) ---
-with st.expander("➕ Medya Ekle (Fotoğraf / Video)"):
-    media_secim = st.radio("Seçimini yap:", ["Hiçbiri", "Fotoğraf Yükle", "Video Yükle"], horizontal=True)
-
-uploaded_file = None
-media_type_str = "Metin"
-
-if media_secim == "Fotoğraf Yükle":
-    uploaded_file = st.file_uploader("Bir fotoğraf seç:", type=["png", "jpg", "jpeg"])
-    media_type_str = "Fotoğraf"
-elif media_secim == "Video Yükle":
-    uploaded_file = st.file_uploader("Bir video seç:", type=["mp4", "mov", "avi"])
-    media_type_str = "Video"
-
-uploaded_file_base64 = None
-if uploaded_file is not None:
-    file_bytes = uploaded_file.read()
-    if media_secim == "Fotoğraf Yükle":
-        st.image(uploaded_file, caption="Yüklenen Görsel", width=300)
-    else:
-        st.video(uploaded_file)
-    uploaded_file_base64 = base64.b64encode(file_bytes).decode("utf-8")
-
 # Ekrana Geçmiş Mesajları HTML Baloncukları Olarak Yazdır
 for message in st.session_state.berko_display:
     if message["role"] == "user":
@@ -172,18 +150,43 @@ for message in st.session_state.berko_display:
         else:
             st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
 
-# Kullanıcıdan Mesaj Al
-if prompt := st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir..."):
-    
+# --- ALT KISIM: INPUT VE ARTI BUTONU YAN YANA ---
+col_plus, col_input = st.columns([0.08, 0.92])
+
+uploaded_file_base64 = None
+media_type_str = "Metin"
+
+with col_plus:
+    # Artı simgesi ile dosya yükleme tetikleyicisi
+    with st.popover("➕"):
+        st.markdown("### Medya Seç")
+        secim = st.radio("Tür:", ["Fotoğraf Yükle", "Video Yükle"], label_visibility="collapsed")
+        
+        uploaded_file = None
+        if secim == "Fotoğraf Yükle":
+            uploaded_file = st.file_uploader("Fotoğraf seç", type=["png", "jpg", "jpeg"])
+            media_type_str = "Fotoğraf"
+        else:
+            uploaded_file = st.file_uploader("Video seç", type=["mp4", "mov", "avi"])
+            media_type_str = "Video"
+            
+        if uploaded_file is not None:
+            file_bytes = uploaded_file.read()
+            uploaded_file_base64 = base64.b64encode(file_bytes).decode("utf-8")
+            st.success("Yüklendi!")
+
+with col_input:
+    prompt = st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir...")
+
+if prompt:
     if uploaded_file_base64:
         display_text = f"[{media_type_str} Yüklendi] {prompt}"
         st.session_state.berko_display.append({"role": "user", "content": display_text})
         st.markdown(f'<div class="user-bubble">{display_text}</div>', unsafe_allow_html=True)
             
-        # Düşünüyor Yazısı
         thinking_placeholder = st.empty()
         thinking_placeholder.markdown('<div class="thinking-text">düşünüyorum aw bekle biraz</div>', unsafe_allow_html=True)
-        time.sleep(1.5)
+        time.sleep(1.8)
         
         try:
             analiz_istegi = client.chat.completions.create(
@@ -206,22 +209,17 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir..."):
         st.session_state.berko_messages.append({"role": "user", "content": prompt})
         st.session_state.berko_display.append({"role": "user", "content": prompt})
         
-        # Kullanıcı mesajını hemen sağda yuvarlak balonla göster
         st.markdown(f'<div class="user-bubble">{prompt}</div>', unsafe_allow_html=True)
             
-        # Düşünüyor Yazısı (2-3 saniye sahte gecikme ve animasyonlu yazı)
         thinking_placeholder = st.empty()
         thinking_placeholder.markdown('<div class="thinking-text">düşünüyorum aw bekle biraz</div>', unsafe_allow_html=True)
         time.sleep(1.8)
         
         try:
             prompt_lower = prompt.lower()
-            
-            # RESİM KONTROLÜ
             resim_kokenleri = ["resim", "resiam", "rsim", "resm", "çiz", "ciz", "görsel", "gorsel", "foto", "fotograf", "oluştur", "değiştir", "dönüştür"]
             is_image_request = any(koken in prompt_lower for koken in resim_kokenleri)
             
-            # Genel sohbet yanıtı
             chat_completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=st.session_state.berko_messages,
@@ -239,7 +237,7 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir..."):
                 cevirici_istegi = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=[
-                        {"role": "system", "content": "Sen profesyonel bir AI görsel tasarımcısısın. Fotogerçekçi, sinematik, 8k detaylı İngilizce görsel promptu ver. Sadece İngilizce promptu yaz."},
+                        {"role": "system", "content": "Sen profesyonel bir AI görsel tasarımcısın. Fotogerçekçi, sinematik, 8k detaylı İngilizce görsel promptu ver. Sadece İngilizce promptu yaz."},
                         {"role": "user", "content": prompt}
                     ],
                     temperature=0.7
@@ -263,3 +261,4 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir..."):
         except Exception as e:
             thinking_placeholder.empty()
             st.error(f"Hata oluştu: {e}")
+
