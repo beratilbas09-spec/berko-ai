@@ -4,6 +4,7 @@
 import streamlit as st
 from groq import Groq
 import urllib.parse
+import time
 
 # Sayfa Ayarları
 st.set_page_config(
@@ -38,7 +39,7 @@ with st.sidebar:
             st.rerun()
             
     st.divider()
-    st.write("Sohbet: Groq | Resim: Ücretsiz Motor")
+    st.write("Sohbet: Groq | Resim: Süper Prompt Motoru")
 
 # --- ANA SOHBET EKRANI ---
 st.title("🧑‍💻 Berko ile Sohbet Et")
@@ -82,7 +83,7 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
         st.markdown(prompt)
         
     with st.chat_message("assistant"):
-        with st.spinner("Berko düşünüyor ve çiziyor..."):
+        with st.spinner("Berko senin için devasa bir prompt tasarlıyor ve çiziyor..."):
             try:
                 resim_kokenleri = ["resim", "resiam", "rsim", "resm", "çiz", "ciz", "görsel", "gorsel", "foto", "fotograf", "oluştur", "yap"]
                 prompt_lower = prompt.lower()
@@ -96,16 +97,40 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
                 berko_yaniti = chat_completion.choices[0].message.content
                 
                 if is_image_request:
-                    harika_yanit = f"Hemen patlatıyorum kanka! Sanat konuşturuyoruz: '{prompt}'"
+                    harika_yanit = f"Hemen patlatıyorum kanka! Detaylı bir sanat eseri kurguluyorum: '{prompt}'"
                     st.markdown(harika_yanit)
                     st.session_state.berko_display.append({"role": "assistant", "content": harika_yanit})
                     
-                    # Pollinations AI resim URL'si (Önbellek kırıcı eklenmiş kusursuz sürüm)
-                    import time
-                    encoded_prompt = urllib.parse.quote(prompt)
+                    # --- SÜPER PROMPT OLUŞTURUCU (ARKA PLAN YAPAY ZEKA GÖRÜŞMESİ) ---
+                    cevirici_istegi = client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=[
+                            {
+                                "role": "system", 
+                                "content": (
+                                    "Sen dünya çapında profesyonel bir AI görsel promptu mühendisisin. "
+                                    "Kullanıcının yazdığı basit veya kısa fikri alıp; ışıklandırma (cinematic lighting, soft volumetric light), "
+                                    "detay seviyesi (highly detailed, 8k resolution, photorealistic veya muazzam dijital sanat stili), "
+                                    "kompozisyon ve renk paleti ekleyerek 40-50 kelimelik **kapsamlı, muazzam bir İngilizce görsel promptuna** dönüştür. "
+                                    "Asla açıklama yapma, sadece ve sadece İngilizce gelişmiş prompt metnini ver."
+                                )
+                            },
+                            {"role": "user", "content": prompt}
+                        ],
+                        temperature=0.7
+                    )
+                    gelismis_ingilizce_prompt = cevirici_istegi.choices[0].message.content.strip()
+                    
+                    # URL kodlaması
+                    encoded_prompt = urllib.parse.quote(gelismis_ingilizce_prompt)
                     image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={int(time.time())}"
                     
                     st.image(image_url, caption=f"Berko'nun Eseri: {prompt}", use_container_width=True)
+                    
+                    # Arka planda oluşturduğu devasa promptu ufak bir bilgi kutusunda gösterelim ki ne kadar profesyonel iş yaptığını gör
+                    with st.expander("🔍 Groq'un Arka Planda Ürettiği Kapsamlı Prompt"):
+                        st.code(gelismis_ingilizce_prompt, language="text")
+                        
                     st.info("💡 Resmi kaydetmek için resmin üzerine sağ tıklayıp 'Resmi Farklı Kaydet' diyebilirsin.")
                     
                     st.session_state.berko_messages.append({"role": "assistant", "content": harika_yanit})
