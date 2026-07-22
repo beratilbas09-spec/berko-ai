@@ -4,6 +4,7 @@ from groq import Groq
 import urllib.parse
 import requests
 import json
+import base64
 
 # Sayfa Ayarları
 st.set_page_config(
@@ -39,7 +40,7 @@ with st.sidebar:
     st.divider()
     st.write("Sohbet: Groq | Resim: Google Imagen API")
 
-# --- ANA SOHBET EKRANI ---
+# --- ANA SOHBET Ekrani ---
 st.title("🧑‍💻 Berko ile Sohbet Et")
 st.write("Kanka selam, ben Berko! Naber, ne konuşuyoruz?")
 
@@ -67,8 +68,15 @@ for message in st.session_state.messages:
     if message["role"] != "system":
         with st.chat_message(message["role"]):
             if message.get("type") == "image":
-                image_url = message["content"]
-                st.image(image_url, caption="Berko'nun Eseri")
+                img_data = message["content"]
+                st.image(img_data, caption="Berko'nun Eseri")
+                st.download_button(
+                    label="📥 Resmi Bilgisayara İndir",
+                    data=img_data,
+                    file_name="berko_gemini.png",
+                    mime="image/png",
+                    key=f"dl_history_{message.get('id', 0)}"
+                )
             else:
                 st.markdown(message["content"])
 
@@ -101,8 +109,8 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
                             st.markdown(temiz_yanit)
                             st.session_state.messages.append({"role": "assistant", "content": temiz_yanit})
                         
-                        # Google'ın Imagen 3 API'sine direkt HTTP isteği atıyoruz (Kütüphane gerektirmez!)
-                        url = f"https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key={gemini_api_key}"
+                        # Google Imagen 3 Model Endpoint (Doğru yol)
+                        url = f"https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key={gemini_api_key}"
                         headers = {"Content-Type": "application/json"}
                         payload = {
                             "instances": [{"prompt": resim_promptu}],
@@ -114,19 +122,24 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
                         if response.status_code == 200:
                             res_json = response.json()
                             base64_img = res_json["predictions"][0]["bytesBase64Encoded"]
-                            
-                            import base64
                             img_bytes = base64.b64decode(base64_img)
                             
                             st.image(img_bytes, caption=f"Berko'nun Eseri: {resim_promptu}")
+                            msg_id = len(st.session_state.messages)
                             st.download_button(
                                 label="📥 Resmi Bilgisayara İndir",
                                 data=img_bytes,
                                 file_name="berko_gemini.png",
-                                mime="image/png"
+                                mime="image/png",
+                                key=f"dl_new_{msg_id}"
                             )
                             
-                            st.session_state.messages.append({"role": "assistant", "content": img_bytes, "type": "image"})
+                            st.session_state.messages.append({
+                                "role": "assistant", 
+                                "content": img_bytes, 
+                                "type": "image",
+                                "id": msg_id
+                            })
                         else:
                             st.error(f"Google API Hatası: {response.text}")
                 else:
