@@ -6,7 +6,7 @@ import requests
 
 # Sayfa Ayarları
 st.set_page_config(
-    page_title="Berko AI | Ücretsiz Resimli",
+    page_title="Berko AI | Resimli ve İndirmeli",
     page_icon="🧑‍💻",
 )
 
@@ -36,7 +36,7 @@ with st.sidebar:
             st.rerun()
             
     st.divider()
-    st.write("Resimler ücretsiz Pollinations AI ile oluşturulur.")
+    st.write("Berko AI - Sınırsız Sohbet & Resim")
 
 # --- ANA SOHBET EKRANI ---
 st.title("🧑‍💻 Berko ile Sohbet Et")
@@ -65,21 +65,15 @@ for i, message in enumerate(st.session_state.messages):
     if message["role"] != "system":
         with st.chat_message(message["role"]):
             if message.get("type") == "image":
-                image_url = message["content"]
-                st.image(image_url, caption="Berko'nun eseri")
-                
-                # Doğrudan indirme butonu
-                try:
-                    img_data = requests.get(image_url).content
-                    st.download_button(
-                        label="📥 Resmi Bilgisayara İndir",
-                        data=img_data,
-                        file_name="berko_eseri.png",
-                        mime="image/png",
-                        key=f"history_download_{i}"
-                    )
-                except:
-                    st.write("İndirme butonu hazırlanamadı.")
+                img_bytes = message["content"]
+                st.image(img_bytes, caption="Berko'nun Eseri")
+                st.download_button(
+                    label="📥 Resmi Bilgisayara İndir",
+                    data=img_bytes,
+                    file_name="berko_resim.jpg",
+                    mime="image/jpeg",
+                    key=f"history_img_{i}"
+                )
             else:
                 st.markdown(message["content"])
 
@@ -112,26 +106,26 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
                             st.markdown(temiz_yanit)
                             st.session_state.messages.append({"role": "assistant", "content": temiz_yanit})
                         
-                        # Pollinations AI URL oluştur
+                        # Resmi doğrudan bayt (binary) olarak indir
                         encoded_prompt = urllib.parse.quote(resim_promptu)
                         pollinations_url = f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&nologo=true"
                         
-                        st.image(pollinations_url, caption=resim_promptu)
-                        
-                        # Gerçek indirme butonu
-                        try:
-                            img_data = requests.get(pollinations_url).content
+                        img_response = requests.get(pollinations_url)
+                        if img_response.status_code == 200:
+                            img_bytes = img_response.content
+                            
+                            st.image(img_bytes, caption=resim_promptu)
                             st.download_button(
                                 label="📥 Resmi Bilgisayara İndir",
-                                data=img_data,
-                                file_name="berko_eseri.png",
-                                mime="image/png",
-                                key=f"new_download"
+                                data=img_bytes,
+                                file_name="berko_resim.jpg",
+                                mime="image/jpeg",
+                                key="new_img_download"
                             )
-                        except:
-                            st.write("İndirilemedi.")
-                        
-                        st.session_state.messages.append({"role": "assistant", "content": pollinations_url, "type": "image"})
+                            
+                            st.session_state.messages.append({"role": "assistant", "content": img_bytes, "type": "image"})
+                        else:
+                            st.error("Resim oluşturulamadı, sunucu yoğun.")
                 else:
                     st.markdown(berko_yaniti)
                     st.session_state.messages.append({"role": "assistant", "content": berko_yaniti})
