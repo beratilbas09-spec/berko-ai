@@ -1,15 +1,18 @@
 
 
-
 import streamlit as st
 from groq import Groq
 import urllib.parse
 import time
+from PIL import Image
+import io
+import base64
 
 # Sayfa Ayarları
 st.set_page_config(
-    page_title="Berko AI | Resimli",
+    page_title="Berko AI | Süper Medya",
     page_icon="🧑‍💻",
+    layout="centered"
 )
 
 # --- GİRİŞ & OTURUM SİMÜLASYONU ---
@@ -39,11 +42,12 @@ with st.sidebar:
             st.rerun()
             
     st.divider()
-    st.write("Sohbet: Groq | Resim: Süper Prompt Motoru")
+    st.write("Sohbet & Vizyon: Groq Llama 3.2/3.3")
+    st.write("Resim Üretim: Flux Ultra Motoru")
 
 # --- ANA SOHBET EKRANI ---
-st.title("🧑‍💻 Berko ile Sohbet Et")
-st.write("Kanka selam, ben Berko! Naber, ne konuşuyoruz?")
+st.title("🧑‍💻 Berko ile Sohbet Et & Çiz")
+st.write("Kanka selam, ben Berko! Fotoğraf yükle, üzerinde konuşalım ya da resim patlatalım.")
 
 # API Anahtarını Kontrol Et
 groq_api_key = st.secrets.get("GROQ_API_KEY")
@@ -66,6 +70,16 @@ if "berko_messages" not in st.session_state:
 if "berko_display" not in st.session_state:
     st.session_state.berko_display = []
 
+# --- GÖRSEL YÜKLEME ALANI (FILE UPLOADER) ---
+uploaded_file = st.file_uploader("📷 Bir fotoğraf yükle (Üzerinde konuşalım / Değiştirelim)", type=["png", "jpg", "jpeg"])
+
+uploaded_image_base64 = None
+if uploaded_file is not None:
+    image_bytes = uploaded_file.read()
+    st.image(uploaded_file, caption="Yüklediğin Görsel", width=300)
+    # Vision modeli için base64 çevirisi
+    uploaded_image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+
 # Ekrana Geçmiş Mesajları Yazdır
 for message in st.session_state.berko_display:
     with st.chat_message(message["role"]):
@@ -75,70 +89,104 @@ for message in st.session_state.berko_display:
             st.markdown(message["content"])
 
 # Kullanıcıdan Mesaj Al
-if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
-    st.session_state.berko_messages.append({"role": "user", "content": prompt})
-    st.session_state.berko_display.append({"role": "user", "content": prompt})
+if prompt := st.chat_input("Berko'ya bir şeyler yaz veya fotoğraf hakkında soru sor..."):
     
-    with st.chat_message("user"):
-        st.markdown(prompt)
-        
-    with st.chat_message("assistant"):
-        with st.spinner("Berko senin için devasa bir prompt tasarlıyor ve çiziyor..."):
-            try:
-                resim_kokenleri = ["resim", "resiam", "rsim", "resm", "çiz", "ciz", "görsel", "gorsel", "foto", "fotograf", "oluştur", "yap"]
-                prompt_lower = prompt.lower()
-                is_image_request = any(koken in prompt_lower for koken in resim_kokenleri)
-                
-                chat_completion = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=st.session_state.berko_messages,
-                    temperature=0.7,
-                )
-                berko_yaniti = chat_completion.choices[0].message.content
-                
-                if is_image_request:
-                    harika_yanit = f"Hemen patlatıyorum kanka! Detaylı bir sanat eseri kurguluyorum: '{prompt}'"
-                    st.markdown(harika_yanit)
-                    st.session_state.berko_display.append({"role": "assistant", "content": harika_yanit})
-                    
-                    # --- SÜPER PROMPT OLUŞTURUCU (ARKA PLAN YAPAY ZEKA GÖRÜŞMESİ) ---
-                    cevirici_istegi = client.chat.completions.create(
-                        model="llama-3.3-70b-versatile",
+    # Kullanıcı görsel yüklediyse ve mesaj attıysa Vision modelini kullanacağız
+    if uploaded_image_base64:
+        st.session_state.berko_display.append({"role": "user", "content": f"[Fotoğraf Yüklendi] {prompt}"})
+        with st.chat_message("user"):
+            st.markdown(f"📷 *[Fotoğraf yüklendi]* {prompt}")
+            
+        with st.chat_message("assistant"):
+            with st.spinner("Berko yüklediğin fotoğrafa bakıyor..."):
+                try:
+                    # Groq Vision Modeli (Görseli anlayan model)
+                    vision_completion = client.chat.completions.create(
+                        model="llama-3.2-90b-vision-preview",
                         messages=[
                             {
-                                "role": "system", 
-                                "content": (
-                                    "Sen dünya çapında profesyonel bir AI görsel promptu mühendisisin. "
-                                    "Kullanıcının yazdığı basit veya kısa fikri alıp; ışıklandırma (cinematic lighting, soft volumetric light), "
-                                    "detay seviyesi (highly detailed, 8k resolution, photorealistic veya muazzam dijital sanat stili), "
-                                    "kompozisyon ve renk paleti ekleyerek 40-50 kelimelik **kapsamlı, muazzam bir İngilizce görsel promptuna** dönüştür. "
-                                    "Asla açıklama yapma, sadece ve sadece İngilizce gelişmiş prompt metnini ver."
-                                )
-                            },
-                            {"role": "user", "content": prompt}
+                                "role": "user",
+                                "content": [
+                                    {"type": "text", "text": f"Kullanıcının yüklediği bu görsel hakkında samimi, kanka tarzında yorum yap ve şu isteğini yerine getir: {prompt}"},
+                                    {
+                                        "type": "image_url",
+                                        "image_url": {
+                                            "url": f"data:image/jpeg;base64,{uploaded_image_base64}"
+                                        },
+                                    },
+                                ],
+                            }
                         ],
-                        temperature=0.7
+                        temperature=0.7,
                     )
-                    gelismis_ingilizce_prompt = cevirici_istegi.choices[0].message.content.strip()
+                    cevap = vision_completion.choices[0].message.content
+                    st.markdown(cevap)
+                    st.session_state.berko_display.append({"role": "assistant", "content": cevap})
+                except Exception as e:
+                    st.error(f"Görsel analiz hatası: {e}")
                     
-                    # URL kodlaması
-                    encoded_prompt = urllib.parse.quote(gelismis_ingilizce_prompt)
-                    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={int(time.time())}"
+    else:
+        # Normal Metin / Resim Üretim Akışı
+        st.session_state.berko_messages.append({"role": "user", "content": prompt})
+        st.session_state.berko_display.append({"role": "user", "content": prompt})
+        
+        with st.chat_message("user"):
+            st.markdown(prompt)
+            
+        with st.chat_message("assistant"):
+            with st.spinner("Berko düşünüyor ve işlem yapıyor..."):
+                try:
+                    resim_kokenleri = ["resim", "resiam", "rsim", "resm", "çiz", "ciz", "görsel", "gorsel", "foto", "fotograf", "oluştur", "yap", "değiştir", "dönüştür"]
+                    prompt_lower = prompt.lower()
+                    is_image_request = any(koken in prompt_lower for koken in resim_kokenleri)
                     
-                    st.image(image_url, caption=f"Berko'nun Eseri: {prompt}", use_container_width=True)
+                    chat_completion = client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=st.session_state.berko_messages,
+                        temperature=0.7,
+                    )
+                    berko_yaniti = chat_completion.choices[0].message.content
                     
-                    # Arka planda oluşturduğu devasa promptu ufak bir bilgi kutusunda gösterelim ki ne kadar profesyonel iş yaptığını gör
-                    with st.expander("🔍 Groq'un Arka Planda Ürettiği Kapsamlı Prompt"):
-                        st.code(gelismis_ingilizce_prompt, language="text")
+                    if is_image_request:
+                        harika_yanit = f"Hemen patlatıyorum kanka! İstediğin konsepti üst düzey kaliteye taşıyorum: '{prompt}'"
+                        st.markdown(harika_yanit)
+                        st.session_state.berko_display.append({"role": "assistant", "content": harika_yanit})
                         
-                    st.info("💡 Resmi kaydetmek için resmin üzerine sağ tıklayıp 'Resmi Farklı Kaydet' diyebilirsin.")
-                    
-                    st.session_state.berko_messages.append({"role": "assistant", "content": harika_yanit})
-                    st.session_state.berko_display.append({"role": "assistant", "content": image_url, "type": "image", "caption": f"Berko'nun Eseri: {prompt}"})
-                else:
-                    st.markdown(berko_yaniti)
-                    st.session_state.berko_messages.append({"role": "assistant", "content": berko_yaniti})
-                    st.session_state.berko_display.append({"role": "assistant", "content": berko_yaniti})
-                    
-            except Exception as e:
-                st.error(f"Hata oluştu: {e}")
+                        # Süper Prompt Üretici
+                        cevirici_istegi = client.chat.completions.create(
+                            model="llama-3.3-70b-versatile",
+                            messages=[
+                                {
+                                    "role": "system", 
+                                    "content": (
+                                        "Sen profesyonel bir AI görsel tasarımcısısın. Kullanıcının isteğini alıp; "
+                                        "fotogerçekçi, sinematik ışıklandırma, 8k çözünürlük, kusursuz detaylar içeren devasa ve profesyonel bir "
+                                        "İngilizce görsel promptuna çevir. Sadece İngilizce promptu ver."
+                                    )
+                                },
+                                {"role": "user", "content": prompt}
+                            ],
+                            temperature=0.7
+                        )
+                        gelismis_ingilizce_prompt = cevirici_istegi.choices[0].message.content.strip()
+                        
+                        # Daha gelişmiş, yüksek kaliteli ve şık alternatif görsel URL uç noktası (Flux Realism / Ultra Modeli)
+                        encoded_prompt = urllib.parse.quote(gelismis_ingilizce_prompt)
+                        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1280&height=720&model=flux-realism&nologo=true&seed={int(time.time())}"
+                        
+                        st.image(image_url, caption=f"Berko'nun Eseri: {prompt}", use_container_width=True)
+                        
+                        with st.expander("🔍 Üretilen Profesyonel Prompt"):
+                            st.code(gelismis_ingilizce_prompt, language="text")
+                            
+                        st.info("💡 Resmi kaydetmek için üzerine sağ tıklayıp 'Resmi Farklı Kaydet' diyebilirsin.")
+                        
+                        st.session_state.berko_messages.append({"role": "assistant", "content": harika_yanit})
+                        st.session_state.berko_display.append({"role": "assistant", "content": image_url, "type": "image", "caption": f"Berko'nun Eseri: {prompt}"})
+                    else:
+                        st.markdown(berko_yaniti)
+                        st.session_state.berko_messages.append({"role": "assistant", "content": berko_yaniti})
+                        st.session_state.berko_display.append({"role": "assistant", "content": berko_yaniti})
+                        
+                except Exception as e:
+                    st.error(f"Hata oluştu: {e}")
