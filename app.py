@@ -1,7 +1,5 @@
 
 
-
-
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -101,19 +99,6 @@ with st.sidebar:
     st.markdown("🎨 Flux Kalitesinde Görsel Çizimi")
     st.markdown("📷 Fotoğraf Analizi")
 
-# --- ANA SOHBET EKRANI ---
-st.title("🧑‍💻 Berko AI Stüdyosu")
-st.write("Kanka selam! Sana nasıl yardımcı olabilirim? Bir şeyler sor, kod yazdıralım veya görsel çizdirelim.")
-
-# API Anahtarını Kontrol Et
-groq_api_key = st.secrets.get("GROQ_API_KEY")
-
-if not groq_api_key:
-    st.error("GROQ_API_KEY bulunamadı! Streamlit Secrets'a ekle kanka.")
-    st.stop()
-
-client = Groq(api_key=groq_api_key)
-
 # Hafıza Başlangıcı
 if "berko_messages" not in st.session_state:
     st.session_state.berko_messages = [
@@ -125,6 +110,20 @@ if "berko_messages" not in st.session_state:
 
 if "berko_display" not in st.session_state:
     st.session_state.berko_display = []
+
+# --- AKILLI BAŞLIK (Sadece hiç mesaj atılmadıysa görünür) ---
+if not st.session_state.berko_display:
+    st.title("🧑‍💻 Berko AI Stüdyosu")
+    st.write("Kanka selam! Sana nasıl yardımcı olabilirim? Bir şeyler sor, kod yazdıralım veya görsel çizdirelim.")
+
+# API Anahtarını Kontrol Et
+groq_api_key = st.secrets.get("GROQ_API_KEY")
+
+if not groq_api_key:
+    st.error("GROQ_API_KEY bulunamadı! Streamlit Secrets'a ekle kanka.")
+    st.stop()
+
+client = Groq(api_key=groq_api_key)
 
 # --- GÖRSEL YÜKLEME ALANI ---
 uploaded_file = st.file_uploader("📷 Bir fotoğraf yükle (Üzerine konuşalım)", type=["png", "jpg", "jpeg"])
