@@ -1,4 +1,5 @@
 
+
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -73,6 +74,15 @@ st.markdown("""
         0% { opacity: 0.4; }
         50% { opacity: 1; }
         100% { opacity: 0.4; }
+    }
+
+    /* Artı butonunu input kutusu ile dikeyde ortala */
+    [data-testid="column"]:has(button[kind="secondary"]) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        padding-top: 24px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -149,8 +159,8 @@ for message in st.session_state.berko_display:
         else:
             st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
 
-# --- ALT KISIM: INPUT VE ARTI BUTONU YAN YANA ---
-col_plus, col_input = st.columns([0.08, 0.92])
+# --- ALT KISIM: INPUT VE ARTI BUTONU YAN YANA VE ORTalanmış ---
+col_plus, col_input = st.columns([0.07, 0.93])
 
 uploaded_file_base64 = None
 media_type_str = "Metin"
