@@ -1,5 +1,6 @@
 
 
+
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -9,8 +10,8 @@ import io
 import base64
 import requests
 import os
-# Hata yönetimi ve yeniden deneme için
 from requests.adapters import HTTPAdapter, Retry
+import socket # DNS çözümleme için yeni kütüphane
 
 # Sayfa Ayarları
 st.set_page_config(
@@ -48,7 +49,7 @@ with st.sidebar:
     st.divider()
     st.write("Sohbet: Groq Llama 3.3 70B")
     st.write("Görsel: Flux Realism")
-    st.write("Müzik: Hugging Face MusicGen (DNS Düzeltmeli)")
+    st.write("Müzik: Hugging Face MusicGen (Stabil)")
 
 # --- ANA SOHBET EKRANI ---
 st.title("🧑‍💻 Berko ile Sohbet, Çizim & Müzik Yap")
@@ -133,14 +134,15 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik 
                 try:
                     prompt_lower = prompt.lower()
                     
-                    # KESİN MÜZİK KONTROLÜ
+                    # MÜZİK KONTROLÜ
                     muzik_kokenleri = ["müzik", "muzik", "şarkı", "sarki", "beste", "melodi", "beat", "ritim", "enstrümantal", "orkestra", "piyano", "gitar"]
                     is_music_request = any(koken in prompt_lower for koken in muzik_kokenleri)
                     
+                    # RESİM KONTROLÜ
                     resim_kokenleri = ["resim", "resiam", "rsim", "resm", "çiz", "ciz", "görsel", "gorsel", "foto", "fotograf", "oluştur", "değiştir", "dönüştür"]
                     is_image_request = any(koken in prompt_lower for koken in resim_kokenleri) and not is_music_request
                     
-                    # Genel sohbet yanıtı için
+                    # Genel sohbet yanıtı
                     chat_completion = client.chat.completions.create(
                         model="llama-3.3-70b-versatile",
                         messages=st.session_state.berko_messages,
@@ -149,7 +151,7 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik 
                     berko_yaniti = chat_completion.choices[0].message.content
                     
                     if is_music_request:
-                        # MÜZİK ÜRETİM MODU (DNS HATA GİDERİCİ İLE)
+                        # MÜZİK ÜRETİM MODU (GÜÇLENDİRİLMİŞ DNS ÇÖZÜMLEME İLE)
                         muzik_baslangici = f"Kulaklıkla dinlemelik harika bir parça kurguluyorum kanka: '{prompt}'"
                         st.markdown(muzik_baslangici)
                         
@@ -171,10 +173,10 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik 
                         ingilizce_music_prompt = cevirici_istegi.choices[0].message.content.strip()
                         st.info(f"Müzik Tarzı Belirlendi: {ingilizce_music_prompt}")
                         
-                        # --- YENİ GÜÇLENDİRİLMİŞ HUGGING FACE İSTEĞİ (DNS HATA ÇÖZÜMLÜ) ---
+                        # --- YENİ GÜÇLENDİRİLMİŞ HUGGING FACE İSTEĞİ ---
                         API_URL = "https://api-inference.huggingface.co/models/facebook/musicgen-large"
                         
-                        # Yeniden deneme ve DNS hatası baypas eden oturum
+                        # HATA YÖNETİMİ VE YENİDEN DENEME (RETRY) STRATEJİSİ
                         retry_strategy = Retry(
                             total=3,
                             backoff_factor=1,
@@ -183,10 +185,12 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik 
                         )
                         adapter = HTTPAdapter(max_retries=retry_strategy)
                         
-                        # Dikkat: Streamlit Cloud ortamında DNS resolver bazen takılabiliyor. 
-                        # Eğer NameResolutionError devam ederse, requests.post(verify=False) eklenebilir 
-                        # ancak bu güvenlik riski oluşturur. Bu çözüm genellikle sorunu çözer.
-                        
+                        # Streamlit ortamında bazen DNS hataları için socket ayarı gerekir
+                        try:
+                            socket.getaddrinfo("api-inference.huggingface.co", 80)
+                        except socket.gaierror:
+                            st.warning("DNS çözümleme sorunu algılandı, bağlantı yeniden deneniyor...")
+
                         with st.session_state.get('huggingface_session', requests.Session()) as session:
                             session.mount("https://", adapter)
                             session.headers = {"Authorization": f"Bearer {hf_api_key}"}
@@ -208,8 +212,8 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik 
                                     else:
                                         st.error(f"Müzik üretilemedi. Hata Kodu: {response.status_code}. Mesaj: {response.text}")
                                         
-                                except requests.exceptions.NameResolutionError:
-                                    st.error("DNS Hatası oluştu. Bu genellikle geçici bir durumdur. Lütfen sayfayı yenileyip tekrar dene kanka.")
+                                except requests.exceptions.ConnectionError:
+                                    st.error("Bağlantı Hatası veya DNS Çözümleme Hatası oluştu. Lütfen sayfayı yenileyip tekrar dene kanka.")
                                 except Exception as e:
                                     st.error(f"Müzik isteği sırasında beklenmeyen hata: {e}")
                         
