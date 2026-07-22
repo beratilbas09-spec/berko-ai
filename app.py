@@ -1,5 +1,6 @@
 
 
+
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -57,7 +58,7 @@ if "berko_messages" not in st.session_state:
     st.session_state.berko_messages = [
         {
             "role": "system",
-            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek bir AI asistanısın. Kullanıcı senden resim yapmanı istediğinde ona kanka gibi laf sokarak veya gaz vererek eşlik et."
+            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek bir AI asistanısın."
         }
     ]
 
@@ -68,7 +69,7 @@ if "berko_display" not in st.session_state:
 for message in st.session_state.berko_display:
     with st.chat_message(message["role"]):
         if message.get("type") == "image":
-            st.image(message["content"], caption=message.get("caption", "Berko'nun Eseri"))
+            st.image(message["content"], caption=message.get("caption", "Berko'nun Eseri"), use_container_width=True)
         else:
             st.markdown(message["content"])
 
@@ -83,11 +84,8 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
     with st.chat_message("assistant"):
         with st.spinner("Berko düşünüyor ve çiziyor..."):
             try:
-                # Yazım hatalarını da yakalamak için geniş bir kelime taraması yapıyoruz
                 resim_kokenleri = ["resim", "resiam", "rsim", "resm", "çiz", "ciz", "görsel", "gorsel", "foto", "fotograf", "oluştur", "yap"]
                 prompt_lower = prompt.lower()
-                
-                # Eğer kullanıcı mesajında resim ile ilgili bir kök kelime varsa direkt resim modunu açıyoruz
                 is_image_request = any(koken in prompt_lower for koken in resim_kokenleri)
                 
                 chat_completion = client.chat.completions.create(
@@ -98,22 +96,21 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
                 berko_yaniti = chat_completion.choices[0].message.content
                 
                 if is_image_request:
-                    # LLaMA saçmalasa bile biz kendi havalı yanıtımızı basalım
                     harika_yanit = f"Hemen patlatıyorum kanka! Sanat konuşturuyoruz: '{prompt}'"
                     st.markdown(harika_yanit)
                     st.session_state.berko_display.append({"role": "assistant", "content": harika_yanit})
                     
-                    # Pollinations AI resim URL'si
+                    # Pollinations AI resim URL'si (Önbellek kırıcı eklenmiş kusursuz sürüm)
+                    import time
                     encoded_prompt = urllib.parse.quote(prompt)
-                    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true"
+                    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={int(time.time())}"
                     
-                    st.image(image_url, caption=f"Berko'nun Eseri: {prompt}")
+                    st.image(image_url, caption=f"Berko'nun Eseri: {prompt}", use_container_width=True)
                     st.info("💡 Resmi kaydetmek için resmin üzerine sağ tıklayıp 'Resmi Farklı Kaydet' diyebilirsin.")
                     
                     st.session_state.berko_messages.append({"role": "assistant", "content": harika_yanit})
                     st.session_state.berko_display.append({"role": "assistant", "content": image_url, "type": "image", "caption": f"Berko'nun Eseri: {prompt}"})
                 else:
-                    # Normal sohbet
                     st.markdown(berko_yaniti)
                     st.session_state.berko_messages.append({"role": "assistant", "content": berko_yaniti})
                     st.session_state.berko_display.append({"role": "assistant", "content": berko_yaniti})
