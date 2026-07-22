@@ -13,10 +13,35 @@ import base64
 
 # Sayfa Ayarları
 st.set_page_config(
-    page_title="Berko AI | Medya & Müzik Stüdyosu",
+    page_title="Berko AI | Akıllı Asistan",
     page_icon="🧑‍💻",
     layout="centered"
 )
+
+# --- ÖZEL CSS İLE ARAYÜZÜ ŞEKİLLENDİRME ---
+st.markdown("""
+    <style>
+    /* Sidebar arka planı ve genel düzen */
+    [data-testid="stSidebar"] {
+        background-color: #1e1e2f;
+        color: white;
+    }
+    [data-testid="stSidebar"] * {
+        color: #ffffff !important;
+    }
+    /* Butonları şıklaştır */
+    .stButton button {
+        border-radius: 8px;
+        border: 1px solid #4a4a6a;
+        background-color: #2b2b40;
+        transition: all 0.3s ease;
+    }
+    .stButton button:hover {
+        background-color: #3b3b5c;
+        border-color: #6c6c96;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # --- GİRİŞ & OTURUM SİMÜLASYONU ---
 if "logged_in" not in st.session_state:
@@ -25,18 +50,21 @@ if "logged_in" not in st.session_state:
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
 
-# Sidebar (Yan Menü)
+# Sidebar (Yan Menü) - Sadeleştirilmiş ve şık
 with st.sidebar:
     st.title("🧑‍💻 Berko AI")
+    st.caption("Yapay Zeka Asistanın")
+    
+    st.divider()
     
     if not st.session_state.logged_in:
-        st.info("Geçmiş sohbetler için giriş yap.")
+        st.info("Geçmiş sohbetler ve kişiselleştirilmiş deneyim için giriş yap.")
         if st.button("🌐 Google ile Giriş Yap", use_container_width=True):
             st.session_state.logged_in = True
             st.session_state.user_email = "berkouser@gmail.com" 
             st.rerun()
     else:
-        st.success(f"Giriş Yapıldı: {st.session_state.user_email}")
+        st.success(f"Giriş Yapıldı:\n{st.session_state.user_email}")
         if st.button("Çıkış Yap", use_container_width=True):
             st.session_state.logged_in = False
             st.session_state.user_email = None
@@ -45,13 +73,14 @@ with st.sidebar:
             st.rerun()
             
     st.divider()
-    st.write("Sohbet: Groq Llama 3.3 70B")
-    st.write("Görsel: Flux Realism")
-    st.write("Müzik: Doğrudan Ses API")
+    st.markdown("### 🚀 Özellikler")
+    st.markdown("💬 Akıllı Sohbet & Kodlama")
+    st.markdown("🎨 Flux Kalitesinde Görsel Çizimi")
+    st.markdown("📷 Fotoğraf Analizi")
 
 # --- ANA SOHBET EKRANI ---
-st.title("🧑‍💻 Berko ile Sohbet, Çizim & Müzik Yap")
-st.write("Kanka selam, ben Berko! Fotoğraf yükle, resim çizdir veya doğrudan müzik patlat.")
+st.title("🧑‍💻 Berko AI Stüdyosu")
+st.write("Kanka selam! Sana nasıl yardımcı olabilirim? Bir şeyler sor, kod yazdıralım veya görsel çizdirelim.")
 
 # API Anahtarını Kontrol Et
 groq_api_key = st.secrets.get("GROQ_API_KEY")
@@ -67,7 +96,7 @@ if "berko_messages" not in st.session_state:
     st.session_state.berko_messages = [
         {
             "role": "system",
-            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek bir AI asistanısın."
+            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek ve teknkten anlayan bir AI asistanısın."
         }
     ]
 
@@ -75,7 +104,7 @@ if "berko_display" not in st.session_state:
     st.session_state.berko_display = []
 
 # --- GÖRSEL YÜKLEME ALANI ---
-uploaded_file = st.file_uploader("📷 Bir fotoğraf yükle (Hakkında konuşalım)", type=["png", "jpg", "jpeg"])
+uploaded_file = st.file_uploader("📷 Bir fotoğraf yükle (Üzerine konuşalım)", type=["png", "jpg", "jpeg"])
 
 uploaded_image_base64 = None
 if uploaded_file is not None:
@@ -88,14 +117,11 @@ for message in st.session_state.berko_display:
     with st.chat_message(message["role"]):
         if message.get("type") == "image":
             st.image(message["content"], caption=message.get("caption", "Berko'nun Eseri"), use_container_width=True)
-        elif message.get("type") == "audio":
-            st.audio(message["content"], format="audio/mp3")
-            st.markdown(message.get("caption", ""))
         else:
             st.markdown(message["content"])
 
 # Kullanıcıdan Mesaj Al
-if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik iste..."):
+if prompt := st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir..."):
     
     if uploaded_image_base64:
         st.session_state.berko_display.append({"role": "user", "content": f"[Fotoğraf Yüklendi] {prompt}"})
@@ -127,17 +153,13 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik 
             st.markdown(prompt)
             
         with st.chat_message("assistant"):
-            with st.spinner("Berko düşünüyor ve işliyor..."):
+            with st.spinner("Berko düşünüyor..."):
                 try:
                     prompt_lower = prompt.lower()
                     
-                    # MÜZİK KONTROLÜ
-                    muzik_kokenleri = ["müzik", "muzik", "şarkı", "sarki", "beste", "melodi", "beat", "ritim", "enstrümantal", "piyano", "gitar"]
-                    is_music_request = any(koken in prompt_lower for koken in muzik_kokenleri)
-                    
                     # RESİM KONTROLÜ
                     resim_kokenleri = ["resim", "resiam", "rsim", "resm", "çiz", "ciz", "görsel", "gorsel", "foto", "fotograf", "oluştur", "değiştir", "dönüştür"]
-                    is_image_request = any(koken in prompt_lower for koken in resim_kokenleri) and not is_music_request
+                    is_image_request = any(koken in prompt_lower for koken in resim_kokenleri)
                     
                     # Genel sohbet yanıtı
                     chat_completion = client.chat.completions.create(
@@ -147,36 +169,7 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik 
                     )
                     berko_yaniti = chat_completion.choices[0].message.content
                     
-                    if is_music_request:
-                        muzik_baslangici = f"Kulaklıkla dinlemelik harika bir parça patlatıyorum kanka: '{prompt}'"
-                        st.markdown(muzik_baslangici)
-                        
-                        # Yapay zeka ile müzik promptunu İngilizce'ye çevirelim
-                        cevirici_istegi = client.chat.completions.create(
-                            model="llama-3.3-70b-versatile",
-                            messages=[
-                                {
-                                    "role": "system",
-                                    "content": "Sen profesyonel bir müzik prodüktörüsün. Kullanıcının isteğini detaylı bir İngilizce müzik ve enstrüman promptuna çevir. Sadece İngilizce promptu yaz."
-                                },
-                                {"role": "user", "content": prompt}
-                            ],
-                            temperature=0.7
-                        )
-                        ingilizce_music_prompt = cevirici_istegi.choices[0].message.content.strip()
-                        st.info(f"Müzik Tarzı Belirlendi: {ingilizce_music_prompt}")
-                        
-                        # Kararlı ve doğrudan ses üreten API endpoint
-                        encoded_audio_prompt = urllib.parse.quote(ingilizce_music_prompt)
-                        audio_url = f"https://text.pollinations.ai/prompt/{encoded_audio_prompt}?model=audio&seed={int(time.time())}"
-                        
-                        st.success("✨ Müzik eseri hazır! Aşağıdan dinleyebilir ve indirebilirsin.")
-                        st.audio(audio_url, format="audio/mp3")
-                        
-                        st.session_state.berko_messages.append({"role": "assistant", "content": muzik_baslangici})
-                        st.session_state.berko_display.append({"role": "assistant", "content": audio_url, "type": "audio", "caption": f"Berko'nun Müzik Eseri: {prompt}"})
-                        
-                    elif is_image_request:
+                    if is_image_request:
                         harika_yanit = f"Hemen patlatıyorum kanka! İstediğin konsepti üst düzey kaliteye taşıyorum: '{prompt}'"
                         st.markdown(harika_yanit)
                         st.session_state.berko_display.append({"role": "assistant", "content": harika_yanit})
