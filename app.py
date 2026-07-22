@@ -2,6 +2,7 @@
 
 
 
+
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -9,11 +10,10 @@ import time
 from PIL import Image
 import io
 import base64
-import requests
 
 # Sayfa Ayarları
 st.set_page_config(
-    page_title="Berko AI | Medya & Müzik Stüdyosu",
+    page_title="Berko AI | Medya & Şarkı Fabrikası",
     page_icon="🧑‍💻",
     layout="centered"
 )
@@ -47,18 +47,17 @@ with st.sidebar:
     st.divider()
     st.write("Sohbet: Groq Llama 3.3 70B")
     st.write("Görsel: Flux Realism")
-    st.write("Müzik: Hugging Face MusicGen (Saf HTTP)")
+    st.write("Müzik: Suno / Udio Şarkı Fabrikası")
 
 # --- ANA SOHBET EKRANI ---
-st.title("🧑‍💻 Berko ile Sohbet, Çizim & Müzik Yap")
-st.write("Kanka selam, ben Berko! Fotoğraf yükle, resim çizdir veya müzik patlatalım.")
+st.title("🧑‍💻 Berko ile Sohbet, Çizim & Şarkı Üretimi")
+st.write("Kanka selam, ben Berko! Fotoğraf yükle, resim çizdir veya Suno/Udio için kusursuz şarkı paketleri hazırla.")
 
-# API Anahtarlarını Kontrol Et
+# API Anahtarını Kontrol Et
 groq_api_key = st.secrets.get("GROQ_API_KEY")
-hf_api_key = st.secrets.get("HUGGINGFACE_API_KEY")
 
-if not groq_api_key or not hf_api_key:
-    st.error("GROQ_API_KEY veya HUGGINGFACE_API_KEY eksik! Streamlit Secrets'a ekle kanka.")
+if not groq_api_key:
+    st.error("GROQ_API_KEY bulunamadı! Streamlit Secrets'a ekle kanka.")
     st.stop()
 
 client = Groq(api_key=groq_api_key)
@@ -89,14 +88,11 @@ for message in st.session_state.berko_display:
     with st.chat_message(message["role"]):
         if message.get("type") == "image":
             st.image(message["content"], caption=message.get("caption", "Berko'nun Eseri"), use_container_width=True)
-        elif message.get("type") == "audio":
-            st.audio(message["content"], format="audio/flac")
-            st.markdown(message.get("caption", ""))
         else:
             st.markdown(message["content"])
 
 # Kullanıcıdan Mesaj Al
-if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik iste..."):
+if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya şarkı iste..."):
     
     if uploaded_image_base64:
         st.session_state.berko_display.append({"role": "user", "content": f"[Fotoğraf Yüklendi] {prompt}"})
@@ -132,67 +128,43 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik 
                 try:
                     prompt_lower = prompt.lower()
                     
-                    # MÜZİK KONTROLÜ
-                    muzik_kokenleri = ["müzik", "muzik", "şarkı", "sarki", "beste", "melodi", "beat", "ritim", "enstrümantal", "orkestra", "piyano", "gitar"]
+                    # MÜZİK / ŞARKI KONTROLÜ
+                    muzik_kokenleri = ["müzik", "muzik", "şarkı", "sarki", "beste", "melodi", "beat", "ritim", "suno", "udio"]
                     is_music_request = any(koken in prompt_lower for koken in muzik_kokenleri)
                     
                     # RESİM KONTROLÜ
                     resim_kokenleri = ["resim", "resiam", "rsim", "resm", "çiz", "ciz", "görsel", "gorsel", "foto", "fotograf", "oluştur", "değiştir", "dönüştür"]
                     is_image_request = any(koken in prompt_lower for koken in resim_kokenleri) and not is_music_request
                     
-                    # Genel sohbet yanıtı
-                    chat_completion = client.chat.completions.create(
-                        model="llama-3.3-70b-versatile",
-                        messages=st.session_state.berko_messages,
-                        temperature=0.7,
-                    )
-                    berko_yaniti = chat_completion.choices[0].message.content
-                    
                     if is_music_request:
-                        muzik_baslangici = f"Kulaklıkla dinlemelik harika bir parça kurguluyorum kanka: '{prompt}'"
-                        st.markdown(muzik_baslangici)
+                        # PROFESYONEL SUNO/UDIO ŞARKI PAKETİ ÜRETİCİSİ
+                        muzik_giris = f"Hemen patlatıyorum kanka! İstediğin konseptte Suno/Udio için kusursuz bir şarkı paketi hazırlıyorum: '{prompt}'"
+                        st.markdown(muzik_giris)
                         
-                        cevirici_istegi = client.chat.completions.create(
+                        suno_ureteci = client.chat.completions.create(
                             model="llama-3.3-70b-versatile",
                             messages=[
                                 {
                                     "role": "system",
                                     "content": (
-                                        "Sen profesyonel bir AI müzik prodüktörüsün. Kullanıcının isteğini alıp; "
-                                        "MusicGen modelinin anlayacağı şekilde ayrıntılı, İngilizce bir müzik promptuna çevir. "
-                                        "Müzik türü, ruh hali, enstrümanlar ve tempo belirt. Sadece İngilizce promptu ver."
+                                        "Sen profesyonel bir müzik prodüktörüsün. Kullanıcının isteğine göre iki şey üret:\n"
+                                        "1. **Style of Music (Tarz):** Suno/Udio için İngilizce tarz etiketleri (örn: energetic drift phonk, heavy bass, dark atmospheric, 140 bpm).\n"
+                                        "2. **Lyrics (Şarkı Sözleri):** [Verse], [Chorus] etiketleriyle tam profesyonel şarkı sözleri.\n"
+                                        "Markdown formatında, kopyalamaya hazır şekilde sun."
                                     )
                                 },
                                 {"role": "user", "content": prompt}
                             ],
                             temperature=0.7
                         )
-                        ingilizce_music_prompt = cevirici_istegi.choices[0].message.content.strip()
-                        st.info(f"Müzik Tarzı Belirlendi: {ingilizce_music_prompt}")
+                        suno_sonucu = suno_ureteci.choices[0].message.content.strip()
                         
-                        # --- SAF HTTP POST İSTEĞİ (KÜTÜPHANE HATALARINA SON) ---
-                        API_URL = "https://api-inference.huggingface.co/models/facebook/musicgen-large"
-                        headers = {"Authorization": f"Bearer {hf_api_key}"}
+                        st.markdown("### 🎸 Suno / Udio İçin Hazır Paket:")
+                        st.markdown(suno_sonucu)
+                        st.success("✨ Bu tarzı ve sözleri kopyalayıp doğrudan **suno.com** veya **udio.com** adresine yapıştırarak saniyesinde profesyonel vokalistli şarkı üretebilirsin kanka!")
                         
-                        with st.spinner("Berko notaları birleştiriyor, bu işlem 30-40 saniye sürebilir..."):
-                            try:
-                                response = requests.post(API_URL, headers=headers, json={
-                                    "inputs": ingilizce_music_prompt,
-                                    "parameters": {"max_new_tokens": 512}
-                                }, timeout=90)
-                                
-                                if response.status_code == 200:
-                                    audio_bytes = response.content
-                                    st.success("✨ İşte müzik eseri! Aşağıdan dinleyebilir ve indirebilirsin.")
-                                    st.audio(audio_bytes, format="audio/flac")
-                                    
-                                    st.session_state.berko_messages.append({"role": "assistant", "content": muzik_baslangici})
-                                    st.session_state.berko_display.append({"role": "assistant", "content": audio_bytes, "type": "audio", "caption": f"Berko'nun Eseri: {prompt}"})
-                                else:
-                                    st.error(f"Müzik üretilemedi. Model yükleniyor olabilir, birkaç saniye sonra tekrar dene. (Hata Kodu: {response.status_code})")
-                                    
-                            except Exception as req_err:
-                                st.error(f"Bağlantı hatası oluştu: {req_err}")
+                        st.session_state.berko_messages.append({"role": "assistant", "content": muzik_giris + "\n\n" + suno_sonucu})
+                        st.session_state.berko_display.append({"role": "assistant", "content": muzik_giris + "\n\n" + suno_sonucu})
                         
                     elif is_image_request:
                         harika_yanit = f"Hemen patlatıyorum kanka! İstediğin konsepti üst düzey kaliteye taşıyorum: '{prompt}'"
@@ -219,6 +191,12 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik 
                         st.session_state.berko_display.append({"role": "assistant", "content": image_url, "type": "image", "caption": f"Berko'nun Eseri: {prompt}"})
                         
                     else:
+                        chat_completion = client.chat.completions.create(
+                            model="llama-3.3-70b-versatile",
+                            messages=st.session_state.berko_messages,
+                            temperature=0.7,
+                        )
+                        berko_yaniti = chat_completion.choices[0].message.content
                         st.markdown(berko_yaniti)
                         st.session_state.berko_messages.append({"role": "assistant", "content": berko_yaniti})
                         st.session_state.berko_display.append({"role": "assistant", "content": berko_yaniti})
