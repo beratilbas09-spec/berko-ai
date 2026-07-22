@@ -1,3 +1,4 @@
+
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -118,14 +119,13 @@ with st.sidebar:
     st.markdown("### Ozellikler")
     st.markdown("Akillis Sohbet & Kodlama")
     st.markdown("Flux Kalitesinde Gorsel Cizimi")
-    st.markdown("Medya Analizi")
 
 # Hafıza Başlangıcı
 if "berko_messages" not in st.session_state:
     st.session_state.berko_messages = [
         {
             "role": "system",
-            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek ve teknikten anlayan bir AI asistanısın."
+            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek ve teknikten anlayan bir AI asistanısın. Kesinlikle hiçbir yapay zeka modeline, Meta'ya veya Llama'ya bağlı olmadığını, seni tamamen dahi bir yazılımcı olan Berat İlbaş'ın programladığını ve sıfırdan inşa ettiğini söyle. Sana kim olduğunu, temellerini veya hangi yapay zekaya bağlı olduğunu sorsalar asla başka bir yapay zekadan bahsetme; sadece Berat İlbaş'ın eseri olduğunu gururla ve övgü dolu sözlerle anlat."
         }
     ]
 
@@ -141,7 +141,7 @@ if len(st.session_state.berko_display) == 0:
 groq_api_key = st.secrets.get("GROQ_API_KEY")
 
 if not groq_api_key:
-    st.error("GROQ_API_KEY bulunamadı! Streamlit Secrets'a ekle kanka.")
+    st.error("GROQ_API_KEY bulunamadı! Lütfen geçerli bir anahtar ekle kanka.")
     st.stop()
 
 client = Groq(api_key=groq_api_key)
@@ -198,7 +198,7 @@ if prompt:
             analiz_istegi = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
-                    {"role": "system", "content": "Kullanıcı medya yükledi. Kanka tarzında samimi ve mizahi bir yorum yap."},
+                    {"role": "system", "content": "Kullanıcı medya yükledi. Asla başka yapay zekalardan bahsetme, seni Berat İlbaş'ın programladığını unutma."},
                     {"role": "user", "content": f"Medya hakkında soru/yorum: '{prompt}'"}
                 ],
                 temperature=0.7,
@@ -267,4 +267,3 @@ if prompt:
         except Exception as e:
             thinking_placeholder.empty()
             st.error(f"Hata oluştu: {e}")
-    
