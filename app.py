@@ -1,11 +1,12 @@
 
 import streamlit as st
 from groq import Groq
-import urllib.parse
+from google import genai
+from google.genai import types
 
 # Sayfa Ayarları
 st.set_page_config(
-    page_title="Berko AI | Resimli ve İndirmeli",
+    page_title="Berko AI | Gemini Resimli",
     page_icon="🧑‍💻",
 )
 
@@ -35,20 +36,23 @@ with st.sidebar:
             st.rerun()
             
     st.divider()
-    st.write("Berko AI - Sınırsız Sohbet & Resim")
+    st.write("Sohbet: Groq (Llama 3.3) | Resim: Google Gemini")
 
 # --- ANA SOHBET EKRANI ---
 st.title("🧑‍💻 Berko ile Sohbet Et")
 st.write("Kanka selam, ben Berko! Naber, ne konuşuyoruz?")
 
-# API Anahtarını Kontrol Et
+# API Anahtarlarını Kontrol Et
 groq_api_key = st.secrets.get("GROQ_API_KEY")
+gemini_api_key = st.secrets.get("GEMINI_API_KEY")
 
-if not groq_api_key:
-    st.error("GROQ_API_KEY bulunamadı! Streamlit Secrets'a ekle.")
+if not groq_api_key or not gemini_api_key:
+    st.error("API anahtarları eksik! Lütfen Streamlit Secrets'a GROQ_API_KEY ve GEMINI_API_KEY ekle.")
     st.stop()
 
+# İstemcileri Başlat
 client = Groq(api_key=groq_api_key)
+google_client = genai.Client(api_key=gemini_api_key)
 
 # Sohbet Geçmişini Başlat
 if "messages" not in st.session_state:
@@ -64,8 +68,14 @@ for message in st.session_state.messages:
     if message["role"] != "system":
         with st.chat_message(message["role"]):
             if message.get("type") == "image":
-                image_url = message["content"]
-                st.image(image_url, caption="Berko'nun Eseri (Resmin sağ üstündeki simgeden indirebilirsin)")
+                image_data = message["content"]
+                st.image(image_data, caption="Berko'nun Eseri")
+                st.download_button(
+                    label="📥 Resmi Bilgisayara İndir",
+                    data=image_data,
+                    file_name="berko_gemini_eseri.png",
+                    mime="image/png",
+                )
             else:
                 st.markdown(message["content"])
 
@@ -98,13 +108,29 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
                             st.markdown(temiz_yanit)
                             st.session_state.messages.append({"role": "assistant", "content": temiz_yanit})
                         
-                        # Doğrudan URL ile resmi basıyoruz, hata riski sıfır!
-                        encoded_prompt = urllib.parse.quote(resim_promptu)
-                        pollinations_url = f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&nologo=true"
+                        # Google Imagen modeliyle resmi üret
+                        result = google_client.models.generate_images(
+                            model='imagen-3.0-generate-002',
+                            prompt=resim_promptu,
+                            config=types.GenerateImagesConfig(
+                                number_of_images=1,
+                                output_mime_type="image/png",
+                                aspect_ratio="1:1",
+                            )
+                        )
                         
-                        st.image(pollinations_url, caption=f"Berko'nun Eseri: {resim_promptu}")
-                        
-                        st.session_state.messages.append({"role": "assistant", "content": pollinations_url, "type": "image"})
+                        for generated_image in result.generated_images:
+                            image_bytes = generated_image.image.image_bytes
+                            
+                            st.image(image_bytes, caption=f"Berko'nun Eseri: {resim_promptu}")
+                            st.download_button(
+                                label="📥 Resmi Bilgisayara İndir",
+                                data=image_bytes,
+                                file_name="berko_gemini_eseri.png",
+                                mime="image/png",
+                            )
+                            
+                            st.session_state.messages.append({"role": "assistant", "content": image_bytes, "type": "image"})
                 else:
                     st.markdown(berko_yaniti)
                     st.session_state.messages.append({"role": "assistant", "content": berko_yaniti})
