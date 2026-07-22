@@ -14,7 +14,10 @@ st.set_page_config(
     page_icon="💻",
     layout="centered"
 )
-
+st.markdown(
+    '<meta name="google-site-verification" content="<meta name="google-site-verification" content="QHKdEcPEf68ahnKS-ncSUNcbOKoYDH4Z_g0yBYCmc4Y" />" />',
+    unsafe_allow_html=True,
+)
 # --- ÖZEL MODERN CSS VE CHAT BALONLARI ---
 st.markdown("""
     <style>
