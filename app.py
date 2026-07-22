@@ -52,12 +52,12 @@ if not groq_api_key:
 
 client = Groq(api_key=groq_api_key)
 
-# Yepyeni ve temiz hafıza anahtarları kullanıyoruz (Eski hatalı verilerden eser kalmasın)
+# Hafıza Başlangıcı
 if "berko_messages" not in st.session_state:
     st.session_state.berko_messages = [
         {
             "role": "system",
-            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek bir AI asistanısın. Kullanıcı senden resim yapmanı istediğinde sadece kısa bir cümle kur ve ardından kesinlikle şu formatta resmi belirt: [RESİM: ingilizce_resim_aciklamasi]. Örnek: [RESİM: a cute cat playing guitar]. Başka hiçbir şey yazma."
+            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek bir AI asistanısın. Kullanıcı sohbet etmek istediğinde sadece normal bir insan gibi sohbet et. Asla durduk yere resim üretmeye çalışama."
         }
     ]
 
@@ -68,7 +68,7 @@ if "berko_display" not in st.session_state:
 for message in st.session_state.berko_display:
     with st.chat_message(message["role"]):
         if message.get("type") == "image":
-            st.image(message["content"], caption="Berko'nun Eseri")
+            st.image(message["content"], caption=message.get("caption", "Berko'nun Eseri"))
         else:
             st.markdown(message["content"])
 
@@ -81,8 +81,12 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
         st.markdown(prompt)
         
     with st.chat_message("assistant"):
-        with st.spinner("Berko düşünüyor ve çiziyor..."):
+        with st.spinner("Berko düşünüyor..."):
             try:
+                # Kullanıcı resim kelimesi geçirmiş mi kontrol edelim
+                resim_kelimeleri = ["resim yap", "çiz", "görsel oluştur", "resmet", "fotoğrafını yap", "oluştur"]
+                is_image_request = any(kelime in prompt.lower() for kelime in resim_kelimeleri)
+                
                 chat_completion = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=st.session_state.berko_messages,
@@ -90,29 +94,23 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
                 )
                 berko_yaniti = chat_completion.choices[0].message.content
                 
-                # Resim etiketini kontrol et ve ayıkla
-                if "[RESİM:" in berko_yaniti:
-                    start_idx = berko_yaniti.find("[RESİM:") + len("[RESİM:")
-                    end_idx = berko_yaniti.find("]", start_idx)
+                # Eğer kullanıcı gerçekten resim istemişse resmi bas, istemediyse sadece normal sohbet etsin
+                if is_image_request:
+                    st.markdown(berko_yaniti)
+                    st.session_state.berko_display.append({"role": "assistant", "content": berko_yaniti})
                     
-                    if end_idx > start_idx:
-                        resim_promptu = berko_yaniti[start_idx:end_idx].strip()
-                        temiz_yanit = berko_yaniti[:berko_yaniti.find("[RESİM:")].strip()
-                        
-                        if temiz_yanit:
-                            st.markdown(temiz_yanit)
-                            st.session_state.berko_display.append({"role": "assistant", "content": temiz_yanit})
-                        
-                        # Pollinations AI resim URL'si
-                        encoded_prompt = urllib.parse.quote(resim_promptu)
-                        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true"
-                        
-                        st.image(image_url, caption=f"Berko'nun Eseri: {resim_promptu}")
-                        st.info("💡 Resmi kaydetmek için resmin üzerine sağ tıklayıp 'Resmi Farklı Kaydet' diyebilirsin.")
-                        
-                        st.session_state.berko_messages.append({"role": "assistant", "content": berko_yaniti})
-                        st.session_state.berko_display.append({"role": "assistant", "content": image_url, "type": "image"})
+                    # İngilizce prompt çevirisi için ufak bir özet alalım veya kullanıcının promptunu kullanalım
+                    resim_promptu = prompt
+                    encoded_prompt = urllib.parse.quote(resim_promptu)
+                    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true"
+                    
+                    st.image(image_url, caption=f"Berko'nun Eseri: {resim_promptu}")
+                    st.info("💡 Resmi kaydetmek için resmin üzerine sağ tıklayıp 'Resmi Farklı Kaydet' diyebilirsin.")
+                    
+                    st.session_state.berko_messages.append({"role": "assistant", "content": berko_yaniti})
+                    st.session_state.berko_display.append({"role": "assistant", "content": image_url, "type": "image", "caption": f"Berko'nun Eseri: {resim_promptu}"})
                 else:
+                    # Normal sohbet
                     st.markdown(berko_yaniti)
                     st.session_state.berko_messages.append({"role": "assistant", "content": berko_yaniti})
                     st.session_state.berko_display.append({"role": "assistant", "content": berko_yaniti})
