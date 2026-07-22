@@ -42,8 +42,8 @@ with st.sidebar:
             st.rerun()
             
     st.divider()
-    st.write("Sohbet & Vizyon: Groq Llama 3.2/3.3")
-    st.write("Resim Üretim: Flux Ultra Motoru")
+    st.write("Sohbet & Vizyon: Groq Llama 3.2 11B Vision")
+    st.write("Resim Üretim: Flux Realism Motoru")
 
 # --- ANA SOHBET EKRANI ---
 st.title("🧑‍💻 Berko ile Sohbet Et & Çiz")
@@ -71,13 +71,12 @@ if "berko_display" not in st.session_state:
     st.session_state.berko_display = []
 
 # --- GÖRSEL YÜKLEME ALANI (FILE UPLOADER) ---
-uploaded_file = st.file_uploader("📷 Bir fotoğraf yükle (Üzerinde konuşalım / Değiştirelim)", type=["png", "jpg", "jpeg"])
+uploaded_file = st.file_uploader("📷 Bir fotoğraf yükle (Üzerinde konuşalım)", type=["png", "jpg", "jpeg"])
 
 uploaded_image_base64 = None
 if uploaded_file is not None:
     image_bytes = uploaded_file.read()
     st.image(uploaded_file, caption="Yüklediğin Görsel", width=300)
-    # Vision modeli için base64 çevirisi
     uploaded_image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 
 # Ekrana Geçmiş Mesajları Yazdır
@@ -91,7 +90,7 @@ for message in st.session_state.berko_display:
 # Kullanıcıdan Mesaj Al
 if prompt := st.chat_input("Berko'ya bir şeyler yaz veya fotoğraf hakkında soru sor..."):
     
-    # Kullanıcı görsel yüklediyse ve mesaj attıysa Vision modelini kullanacağız
+    # Kullanıcı görsel yüklediyse ve mesaj attıysa güncel Vision modelini kullanacağız
     if uploaded_image_base64:
         st.session_state.berko_display.append({"role": "user", "content": f"[Fotoğraf Yüklendi] {prompt}"})
         with st.chat_message("user"):
@@ -100,9 +99,8 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz veya fotoğraf hakkında so
         with st.chat_message("assistant"):
             with st.spinner("Berko yüklediğin fotoğrafa bakıyor..."):
                 try:
-                    # Groq Vision Modeli (Görseli anlayan model)
                     vision_completion = client.chat.completions.create(
-                        model="llama-3.2-90b-vision-preview",
+                        model="llama-3.2-11b-vision-preview",
                         messages=[
                             {
                                 "role": "user",
@@ -170,7 +168,7 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz veya fotoğraf hakkında so
                         )
                         gelismis_ingilizce_prompt = cevirici_istegi.choices[0].message.content.strip()
                         
-                        # Daha gelişmiş, yüksek kaliteli ve şık alternatif görsel URL uç noktası (Flux Realism / Ultra Modeli)
+                        # Flux Realism Motoru
                         encoded_prompt = urllib.parse.quote(gelismis_ingilizce_prompt)
                         image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1280&height=720&model=flux-realism&nologo=true&seed={int(time.time())}"
                         
