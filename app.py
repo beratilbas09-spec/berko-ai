@@ -7,7 +7,6 @@ import time
 from PIL import Image
 import io
 import base64
-import requests
 
 # Sayfa Ayarları
 st.set_page_config(
@@ -45,7 +44,7 @@ with st.sidebar:
     st.divider()
     st.write("Sohbet: Groq Llama 3.3 70B")
     st.write("Görsel: Flux Realism")
-    st.write("Müzik: Hugging Face MusicGen (Kararlı API)")
+    st.write("Müzik: Pollinations Audio Engine")
 
 # --- ANA SOHBET EKRANI ---
 st.title("🧑‍💻 Berko ile Sohbet, Çizim & Müzik Yap")
@@ -53,10 +52,9 @@ st.write("Kanka selam, ben Berko! Fotoğraf yükle, resim çizdir veya müzik pa
 
 # API Anahtarını Kontrol Et
 groq_api_key = st.secrets.get("GROQ_API_KEY")
-hf_api_key = st.secrets.get("HUGGINGFACE_API_KEY")
 
-if not groq_api_key or not hf_api_key:
-    st.error("GROQ_API_KEY veya HUGGINGFACE_API_KEY bulunamadı! Streamlit Secrets'a ekle.")
+if not groq_api_key:
+    st.error("GROQ_API_KEY bulunamadı! Streamlit Secrets'a ekle kanka.")
     st.stop()
 
 client = Groq(api_key=groq_api_key)
@@ -88,7 +86,7 @@ for message in st.session_state.berko_display:
         if message.get("type") == "image":
             st.image(message["content"], caption=message.get("caption", "Berko'nun Eseri"), use_container_width=True)
         elif message.get("type") == "audio":
-            st.audio(message["content"], format="audio/flac")
+            st.audio(message["content"], format="audio/mp3")
             st.markdown(message.get("caption", ""))
         else:
             st.markdown(message["content"])
@@ -147,9 +145,10 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik 
                     berko_yaniti = chat_completion.choices[0].message.content
                     
                     if is_music_request:
-                        muzik_baslangici = f"Kulaklıkla dinlemelik harika bir parça kurguluyorum kanka: '{prompt}'"
+                        muzik_baslangici = f"Kulaklıkla dinlemelik harika bir parça patlatıyorum kanka: '{prompt}'"
                         st.markdown(muzik_baslangici)
                         
+                        # Müzik için detaylı İngilizce prompt üretelim
                         cevirici_istegi = client.chat.completions.create(
                             model="llama-3.3-70b-versatile",
                             messages=[
@@ -157,8 +156,8 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik 
                                     "role": "system",
                                     "content": (
                                         "Sen profesyonel bir AI müzik prodüktörüsün. Kullanıcının isteğini alıp; "
-                                        "MusicGen modelinin anlayacağı şekilde ayrıntılı, İngilizce bir müzik promptuna çevir. "
-                                        "Müzik türü, ruh hali, enstrümanlar ve tempo belirt. Sadece İngilizce promptu ver."
+                                        "müzik üretim motorunun anlayacağı şekilde ayrıntılı, İngilizce bir müzik tarzı ve enstrüman promptu ver. "
+                                        "Sadece İngilizce promptu ver."
                                     )
                                 },
                                 {"role": "user", "content": prompt}
@@ -168,29 +167,15 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik 
                         ingilizce_music_prompt = cevirici_istegi.choices[0].message.content.strip()
                         st.info(f"Müzik Tarzı Belirlendi: {ingilizce_music_prompt}")
                         
-                        # --- DOĞRUDAN HUGGING FACE API İSTEĞİ (STABİL) ---
-                        API_URL = "https://api-inference.huggingface.co/models/facebook/musicgen-large"
-                        headers = {"Authorization": f"Bearer {hf_api_key}"}
+                        # DNS sorunu yaratmayan güvenli Pollinations Audio uç noktası
+                        encoded_music_prompt = urllib.parse.quote(ingilizce_music_prompt)
+                        audio_url = f"https://image.pollinations.ai/prompt/{encoded_music_prompt}?model=audio&seed={int(time.time())}"
                         
-                        with st.spinner("Berko notaları birleştiriyor, bu işlem 30-60 saniye sürebilir..."):
-                            try:
-                                response = requests.post(API_URL, headers=headers, json={
-                                    "inputs": ingilizce_music_prompt,
-                                    "parameters": {"max_new_tokens": 512}
-                                }, timeout=90)
-                                
-                                if response.status_code == 200:
-                                    audio_bytes = response.content
-                                    st.success("✨ İşte müzik eseri! Aşağıdan dinleyip indirebilirsin.")
-                                    st.audio(audio_bytes, format="audio/flac")
-                                    
-                                    st.session_state.berko_messages.append({"role": "assistant", "content": muzik_baslangici})
-                                    st.session_state.berko_display.append({"role": "assistant", "content": audio_bytes, "type": "audio", "caption": f"Berko'nun Eseri: {prompt}"})
-                                else:
-                                    st.error(f"Müzik üretilemedi. Model yükleniyor olabilir, birkaç saniye sonra tekrar dene. (Hata: {response.status_code})")
-                                    
-                            except Exception as e:
-                                st.error(f"Bağlantı hatası oluştu: {e}")
+                        st.success("✨ Müzik eseri hazır! Aşağıdan dinleyebilir veya indirebilirsin.")
+                        st.audio(audio_url, format="audio/mp3")
+                        
+                        st.session_state.berko_messages.append({"role": "assistant", "content": muzik_baslangici})
+                        st.session_state.berko_display.append({"role": "assistant", "content": audio_url, "type": "audio", "caption": f"Berko'nun Müzik Eseri: {prompt}"})
                         
                     elif is_image_request:
                         harika_yanit = f"Hemen patlatıyorum kanka! İstediğin konsepti üst düzey kaliteye taşıyorum: '{prompt}'"
