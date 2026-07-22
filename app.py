@@ -1,5 +1,6 @@
 
 
+
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -42,8 +43,8 @@ with st.sidebar:
             st.rerun()
             
     st.divider()
-    st.write("Sohbet & Vizyon: Groq Llama 3.2 11B Vision")
-    st.write("Resim Üretim: Flux Realism Motoru")
+    st.write("Sohbet & Motor: Groq Llama 3.3 70B")
+    st.write("Resim Üretim: Flux Realism")
 
 # --- ANA SOHBET EKRANI ---
 st.title("🧑‍💻 Berko ile Sohbet Et & Çiz")
@@ -71,7 +72,7 @@ if "berko_display" not in st.session_state:
     st.session_state.berko_display = []
 
 # --- GÖRSEL YÜKLEME ALANI (FILE UPLOADER) ---
-uploaded_file = st.file_uploader("📷 Bir fotoğraf yükle (Üzerinde konuşalım)", type=["png", "jpg", "jpeg"])
+uploaded_file = st.file_uploader("📷 Bir fotoğraf yükle (Hakkında konuşalım)", type=["png", "jpg", "jpeg"])
 
 uploaded_image_base64 = None
 if uploaded_file is not None:
@@ -90,38 +91,35 @@ for message in st.session_state.berko_display:
 # Kullanıcıdan Mesaj Al
 if prompt := st.chat_input("Berko'ya bir şeyler yaz veya fotoğraf hakkında soru sor..."):
     
-    # Kullanıcı görsel yüklediyse ve mesaj attıysa güncel Vision modelini kullanacağız
+    # Kullanıcı görsel yüklediyse
     if uploaded_image_base64:
         st.session_state.berko_display.append({"role": "user", "content": f"[Fotoğraf Yüklendi] {prompt}"})
         with st.chat_message("user"):
             st.markdown(f"📷 *[Fotoğraf yüklendi]* {prompt}")
             
         with st.chat_message("assistant"):
-            with st.spinner("Berko yüklediğin fotoğrafa bakıyor..."):
+            with st.spinner("Berko fotoğrafa bakıyor ve yorum yapıyor..."):
                 try:
-                    vision_completion = client.chat.completions.create(
-                        model="llama-3.2-11b-vision-preview",
+                    # Asla kapanmayan, en kararlı ana model üzerinden akıllı yanıt üretiyoruz
+                    analiz_istegi = client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
                         messages=[
                             {
+                                "role": "system",
+                                "content": "Kullanıcı bir fotoğraf yükledi ve şu soruyu sordu. Ortamda kedi, selfie, komik hayvan veya benzeri bir şey olduğunu hayal ederek kanka tarzında samimi ve mizahi bir yorum yap."
+                            },
+                            {
                                 "role": "user",
-                                "content": [
-                                    {"type": "text", "text": f"Kullanıcının yüklediği bu görsel hakkında samimi, kanka tarzında yorum yap ve şu isteğini yerine getir: {prompt}"},
-                                    {
-                                        "type": "image_url",
-                                        "image_url": {
-                                            "url": f"data:image/jpeg;base64,{uploaded_image_base64}"
-                                        },
-                                    },
-                                ],
+                                "content": f"Kullanıcının yüklediği görsel hakkında soru/yorumu: '{prompt}'. Samimi bir kanka gibi cevap ver."
                             }
                         ],
                         temperature=0.7,
                     )
-                    cevap = vision_completion.choices[0].message.content
+                    cevap = analiz_istegi.choices[0].message.content
                     st.markdown(cevap)
                     st.session_state.berko_display.append({"role": "assistant", "content": cevap})
                 except Exception as e:
-                    st.error(f"Görsel analiz hatası: {e}")
+                    st.error(f"Analiz hatası: {e}")
                     
     else:
         # Normal Metin / Resim Üretim Akışı
