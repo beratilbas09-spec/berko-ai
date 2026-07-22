@@ -17,10 +17,9 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- ÖZEL CHAT BALONCULUKLARI VE ARAYÜZ CSS'İ ---
+# --- ÖZEL MODERN BALONCUK CSS ---
 st.markdown("""
     <style>
-    /* Sidebar tasarımı */
     [data-testid="stSidebar"] {
         background-color: #1e1e2f;
         color: white;
@@ -39,29 +38,30 @@ st.markdown("""
         border-color: #6c6c96;
     }
 
-    /* --- CHAT BALONCUĞU STİLLERİ --- */
-    /* Kullanıcı mesajları (Sağda yuvarlak balon) */
-    [data-testid="stChatMessage"]:has(div[aria-label="user"]) {
-        flex-direction: row-reverse;
-        text-align: right;
-    }
-    [data-testid="stChatMessage"]:has(div[aria-label="user"]) .st-emotion-cache-1c7y2kd {
-        background-color: #f1f1f3;
-        border-radius: 20px 20px 0px 20px;
+    /* Kullanıcı Balonu (Sağda şık gri yuvarlak kutu) */
+    .user-bubble {
+        background-color: #f0f2f6;
+        color: #111111;
         padding: 12px 18px;
-        display: inline-block;
-        max-width: 80%;
+        border-radius: 18px 18px 4px 18px;
+        max-width: 75%;
+        margin-left: auto;
+        margin-bottom: 10px;
         box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        font-size: 15px;
+        word-wrap: break-word;
     }
 
-    /* Asistan (Berko) mesajları (Solda düz, sade yazı akışı) */
-    [data-testid="stChatMessage"]:has(div[aria-label="assistant"]) {
-        text-align: left;
-    }
-    [data-testid="stChatMessage"]:has(div[aria-label="assistant"]) .st-emotion-cache-1c7y2kd {
+    /* Berko Balonu / Akışı (Solda düz yazı) */
+    .berko-response {
         background-color: transparent;
+        color: inherit;
         padding: 8px 0px;
-        box-shadow: none;
+        max-width: 85%;
+        margin-right: auto;
+        margin-bottom: 15px;
+        font-size: 15px;
+        word-wrap: break-word;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -73,7 +73,7 @@ if "logged_in" not in st.session_state:
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
 
-# Sidebar (Yan Menü) - Sade
+# Sidebar (Yan Menü)
 with st.sidebar:
     st.title("🧑‍💻 Berko AI")
     st.caption("Yapay Zeka Asistanın")
@@ -101,7 +101,7 @@ with st.sidebar:
     st.markdown("🎨 Flux Kalitesinde Görsel Çizimi")
     st.markdown("📷 Fotoğraf Analizi")
 
-# --- ANA SOHBET Ekrani ---
+# --- ANA SOHBET EKRANI ---
 st.title("🧑‍💻 Berko AI Stüdyosu")
 st.write("Kanka selam! Sana nasıl yardımcı olabilirim? Bir şeyler sor, kod yazdıralım veya görsel çizdirelim.")
 
@@ -135,91 +135,92 @@ if uploaded_file is not None:
     st.image(uploaded_file, caption="Yüklediğin Görsel", width=300)
     uploaded_image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 
-# Ekrana Geçmiş Mesajları Yazdır
+# Ekrana Geçmiş Mesajları HTML Baloncukları Olarak Yazdır
 for message in st.session_state.berko_display:
-    with st.chat_message(message["role"]):
+    if message["role"] == "user":
+        st.markdown(f'<div class="user-bubble">👤 {message["content"]}</div>', unsafe_allow_html=True)
+    else:
         if message.get("type") == "image":
+            st.markdown(f'<div class="berko-response">🤖 <b>Berko:</b></div>', unsafe_allow_html=True)
             st.image(message["content"], caption=message.get("caption", "Berko'nun Eseri"), use_container_width=True)
         else:
-            st.markdown(message["content"])
+            st.markdown(f'<div class="berko-response">🤖 <b>Berko:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
 
 # Kullanıcıdan Mesaj Al
 if prompt := st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir..."):
     
     if uploaded_image_base64:
-        st.session_state.berko_display.append({"role": "user", "content": f"[Fotoğraf Yüklendi] {prompt}"})
-        with st.chat_message("user"):
-            st.markdown(f"📷 *[Fotoğraf yüklendi]* {prompt}")
+        display_text = f"[Fotoğraf Yüklendi] {prompt}"
+        st.session_state.berko_display.append({"role": "user", "content": display_text})
+        st.markdown(f'<div class="user-bubble">👤 {display_text}</div>', unsafe_allow_html=True)
             
-        with st.chat_message("assistant"):
-            with st.spinner("Berko fotoğrafa bakıyor ve yorum yapıyor..."):
-                try:
-                    analiz_istegi = client.chat.completions.create(
-                        model="llama-3.3-70b-versatile",
-                        messages=[
-                            {"role": "system", "content": "Kullanıcı bir fotoğraf yükledi. Kanka tarzında samimi ve mizahi bir yorum yap."},
-                            {"role": "user", "content": f"Görsel hakkında soru/yorum: '{prompt}'"}
-                        ],
-                        temperature=0.7,
-                    )
-                    cevap = analiz_istegi.choices[0].message.content
-                    st.markdown(cevap)
-                    st.session_state.berko_display.append({"role": "assistant", "content": cevap})
-                except Exception as e:
-                    st.error(f"Analiz hatası: {e}")
+        with st.spinner("Berko fotoğrafa bakıyor ve yorum yapıyor..."):
+            try:
+                analiz_istegi = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[
+                        {"role": "system", "content": "Kullanıcı bir fotoğraf yükledi. Kanka tarzında samimi ve mizahi bir yorum yap."},
+                        {"role": "user", "content": f"Görsel hakkında soru/yorum: '{prompt}'"}
+                    ],
+                    temperature=0.7,
+                )
+                cevap = analiz_istegi.choices[0].message.content
+                st.markdown(f'<div class="berko-response">🤖 <b>Berko:</b><br>{cevap}</div>', unsafe_allow_html=True)
+                st.session_state.berko_display.append({"role": "assistant", "content": cevap})
+            except Exception as e:
+                st.error(f"Analiz hatası: {e}")
                     
     else:
         st.session_state.berko_messages.append({"role": "user", "content": prompt})
         st.session_state.berko_display.append({"role": "user", "content": prompt})
         
-        with st.chat_message("user"):
-            st.markdown(prompt)
+        # Kullanıcı mesajını hemen sağda yuvarlak balonla göster
+        st.markdown(f'<div class="user-bubble">👤 {prompt}</div>', unsafe_allow_html=True)
             
-        with st.chat_message("assistant"):
-            with st.spinner("Berko düşünüyor..."):
-                try:
-                    prompt_lower = prompt.lower()
+        with st.spinner("Berko düşünüyor..."):
+            try:
+                prompt_lower = prompt.lower()
+                
+                # RESİM KONTROLÜ
+                resim_kokenleri = ["resim", "resiam", "rsim", "resm", "çiz", "ciz", "görsel", "gorsel", "foto", "fotograf", "oluştur", "değiştir", "dönüştür"]
+                is_image_request = any(koken in prompt_lower for koken in resim_kokenleri)
+                
+                # Genel sohbet yanıtı
+                chat_completion = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=st.session_state.berko_messages,
+                    temperature=0.7,
+                )
+                berko_yaniti = chat_completion.choices[0].message.content
+                
+                if is_image_request:
+                    harika_yanit = f"Hemen patlatıyorum kanka! İstediğin konsepti üst düzey kaliteye taşıyorum: '{prompt}'"
+                    st.markdown(f'<div class="berko-response">🤖 <b>Berko:</b><br>{harika_yanit}</div>', unsafe_allow_html=True)
+                    st.session_state.berko_display.append({"role": "assistant", "content": harika_yanit})
                     
-                    # RESİM KONTROLÜ
-                    resim_kokenleri = ["resim", "resiam", "rsim", "resm", "çiz", "ciz", "görsel", "gorsel", "foto", "fotograf", "oluştur", "değiştir", "dönüştür"]
-                    is_image_request = any(koken in prompt_lower for koken in resim_kokenleri)
-                    
-                    # Genel sohbet yanıtı
-                    chat_completion = client.chat.completions.create(
+                    cevirici_istegi = client.chat.completions.create(
                         model="llama-3.3-70b-versatile",
-                        messages=st.session_state.berko_messages,
-                        temperature=0.7,
+                        messages=[
+                            {"role": "system", "content": "Sen profesyonel bir AI görsel tasarımcısısın. Fotogerçekçi, sinematik, 8k detaylı İngilizce görsel promptu ver. Sadece İngilizce promptu yaz."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        temperature=0.7
                     )
-                    berko_yaniti = chat_completion.choices[0].message.content
+                    gelismis_ingilizce_prompt = cevirici_istegi.choices[0].message.content.strip()
                     
-                    if is_image_request:
-                        harika_yanit = f"Hemen patlatıyorum kanka! İstediğin konsepti üst düzey kaliteye taşıyorum: '{prompt}'"
-                        st.markdown(harika_yanit)
-                        st.session_state.berko_display.append({"role": "assistant", "content": harika_yanit})
-                        
-                        cevirici_istegi = client.chat.completions.create(
-                            model="llama-3.3-70b-versatile",
-                            messages=[
-                                {"role": "system", "content": "Sen profesyonel bir AI görsel tasarımcısısın. Fotogerçekçi, sinematik, 8k detaylı İngilizce görsel promptu ver. Sadece İngilizce promptu yaz."},
-                                {"role": "user", "content": prompt}
-                            ],
-                            temperature=0.7
-                        )
-                        gelismis_ingilizce_prompt = cevirici_istegi.choices[0].message.content.strip()
-                        
-                        encoded_prompt = urllib.parse.quote(gelismis_ingilizce_prompt)
-                        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1280&height=720&model=flux-realism&nologo=true&seed={int(time.time())}"
-                        
-                        st.image(image_url, caption=f"Berko'nun Eseri: {prompt}", use_container_width=True)
-                        st.info("💡 Resmi kaydetmek için üzerine sağ tıklayıp 'Resmi Farklı Kaydet' diyebilirsin.")
-                        
-                        st.session_state.berko_messages.append({"role": "assistant", "content": harika_yanit})
-                        st.session_state.berko_display.append({"role": "assistant", "content": image_url, "type": "image", "caption": f"Berko'nun Eseri: {prompt}"})
-                        
-                    else:
-                        st.markdown(berko_yaniti)
-                        st.session_state.berko_messages.append({"role": "assistant", "content": berko_yaniti})
-                        st.session_state.berko_display.append({"role": "assistant", "content": berko_yaniti})
-                        
-                except Exception as e:
-                    st.error(f"Hata oluştu: {e}")
+                    encoded_prompt = urllib.parse.quote(gelismis_ingilizce_prompt)
+                    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1280&height=720&model=flux-realism&nologo=true&seed={int(time.time())}"
+                    
+                    st.image(image_url, caption=f"Berko'nun Eseri: {prompt}", use_container_width=True)
+                    st.info("💡 Resmi kaydetmek için üzerine sağ tıklayıp 'Resmi Farklı Kaydet' diyebilirsin.")
+                    
+                    st.session_state.berko_messages.append({"role": "assistant", "content": harika_yanit})
+                    st.session_state.berko_display.append({"role": "assistant", "content": image_url, "type": "image", "caption": f"Berko'nun Eseri: {prompt}"})
+                    
+                else:
+                    st.markdown(f'<div class="berko-response">🤖 <b>Berko:</b><br>{berko_yaniti}</div>', unsafe_allow_html=True)
+                    st.session_state.berko_messages.append({"role": "assistant", "content": berko_yaniti})
+                    st.session_state.berko_display.append({"role": "assistant", "content": berko_yaniti})
+                    
+            except Exception as e:
+                st.error(f"Hata oluştu: {e}")
