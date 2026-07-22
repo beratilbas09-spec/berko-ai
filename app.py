@@ -1,5 +1,4 @@
 
-i
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -157,7 +156,6 @@ uploaded_file_base64 = None
 media_type_str = "Metin"
 
 with col_plus:
-    # Artı simgesi ile dosya yükleme tetikleyicisi
     with st.popover("➕"):
         st.markdown("### Medya Seç")
         secim = st.radio("Tür:", ["Fotoğraf Yükle", "Video Yükle"], label_visibility="collapsed")
@@ -237,7 +235,7 @@ if prompt:
                 cevirici_istegi = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=[
-                        {"role": "system", "content": "Sen profesyonel bir AI görsel tasarımcısın. Fotogerçekçi, sinematik, 8k detaylı İngilizce görsel promptu ver. Sadece İngilizce promptu yaz."},
+                        {"role": "system", "content": "Sen profesyonel bir AI görsel tasarımcısısın. Fotogerçekçi, sinematik, 8k detaylı İngilizce görsel promptu ver. Sadece İngilizce promptu yaz."},
                         {"role": "user", "content": prompt}
                     ],
                     temperature=0.7
@@ -261,4 +259,3 @@ if prompt:
         except Exception as e:
             thinking_placeholder.empty()
             st.error(f"Hata oluştu: {e}")
-
