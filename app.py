@@ -32,6 +32,7 @@ with st.sidebar:
             st.session_state.logged_in = False
             st.session_state.user_email = None
             st.session_state.messages = [] 
+            st.session_state.display_messages = []
             st.rerun()
             
     st.divider()
@@ -50,7 +51,7 @@ if not groq_api_key:
 
 client = Groq(api_key=groq_api_key)
 
-# Sohbet Geçmişini Başlat
+# 1. Groq'a giden saf metin geçmişi (Modelin kafası karışmasın diye)
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {
@@ -59,19 +60,24 @@ if "messages" not in st.session_state:
         }
     ]
 
-# Geçmiş Mesajları Ekrana Yazdır
-for message in st.session_state.messages:
-    if message["role"] != "system":
-        with st.chat_message(message["role"]):
-            if message.get("type") == "image":
-                image_url = message["content"]
-                st.image(image_url, caption="Berko'nun Eseri")
-            else:
-                st.markdown(message["content"])
+# 2. Ekranda gösterilecek görsel/metin geçmişi (Kullanıcıya resimleri göstermek için)
+if "display_messages" not in st.session_state:
+    st.session_state.display_messages = []
+
+# Ekrana Geçmiş Mesajları Yazdır
+for message in st.session_state.display_messages:
+    with st.chat_message(message["role"]):
+        if message.get("type") == "image":
+            st.image(message["content"], caption="Berko'nun Eseri")
+        else:
+            st.markdown(message["content"])
 
 # Kullanıcıdan Mesaj Al
 if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
+    # Kullanıcı mesajını her iki geçmişe de ekle
     st.session_state.messages.append({"role": "user", "content": prompt})
+    st.session_state.display_messages.append({"role": "user", "content": prompt})
+    
     with st.chat_message("user"):
         st.markdown(prompt)
         
@@ -96,19 +102,23 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
                         
                         if temiz_yanit:
                             st.markdown(temiz_yanit)
-                            st.session_state.messages.append({"role": "assistant", "content": temiz_yanit})
+                            st.session_state.display_messages.append({"role": "assistant", "content": temiz_yanit})
                         
-                        # Pollinations AI'ın en kararlı ve bozulmayan uç noktası (Flux modeli)
+                        # Pollinations AI resim URL'si
                         encoded_prompt = urllib.parse.quote(resim_promptu)
                         image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true"
                         
                         st.image(image_url, caption=f"Berko'nun Eseri: {resim_promptu}")
                         st.info("💡 Resmi kaydetmek için resmin üzerine sağ tıklayıp 'Resmi Farklı Kaydet' diyebilirsin.")
                         
-                        st.session_state.messages.append({"role": "assistant", "content": image_url, "type": "image"})
+                        # Groq'un kafası karışmasın diye hafızaya sadece metinsel yanıtı ekliyoruz
+                        st.session_state.messages.append({"role": "assistant", "content": berko_yaniti})
+                        # Ekranda resim gözüksün diye display listesine ekliyoruz
+                        st.session_state.display_messages.append({"role": "assistant", "content": image_url, "type": "image"})
                 else:
                     st.markdown(berko_yaniti)
                     st.session_state.messages.append({"role": "assistant", "content": berko_yaniti})
+                    st.session_state.display_messages.append({"role": "assistant", "content": berko_yaniti})
                     
             except Exception as e:
                 st.error(f"Hata oluştu: {e}")
