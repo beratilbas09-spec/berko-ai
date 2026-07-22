@@ -118,6 +118,7 @@ with st.sidebar:
     st.markdown("### Ozellikler")
     st.markdown("Akillis Sohbet & Kodlama")
     st.markdown("Flux Kalitesinde Gorsel Cizimi")
+    st.markdown("Medya Analizi")
 
 # Hafıza Başlangıcı
 if "berko_messages" not in st.session_state:
@@ -266,3 +267,4 @@ if prompt:
         except Exception as e:
             thinking_placeholder.empty()
             st.error(f"Hata oluştu: {e}")
+    
