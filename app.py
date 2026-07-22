@@ -2,7 +2,6 @@
 
 
 
-
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -18,10 +17,10 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- ÖZEL CSS İLE ARAYÜZÜ ŞEKİLLENDİRME ---
+# --- ÖZEL CHAT BALONCULUKLARI VE ARAYÜZ CSS'İ ---
 st.markdown("""
     <style>
-    /* Sidebar arka planı ve genel düzen */
+    /* Sidebar tasarımı */
     [data-testid="stSidebar"] {
         background-color: #1e1e2f;
         color: white;
@@ -29,7 +28,6 @@ st.markdown("""
     [data-testid="stSidebar"] * {
         color: #ffffff !important;
     }
-    /* Butonları şıklaştır */
     .stButton button {
         border-radius: 8px;
         border: 1px solid #4a4a6a;
@@ -39,6 +37,31 @@ st.markdown("""
     .stButton button:hover {
         background-color: #3b3b5c;
         border-color: #6c6c96;
+    }
+
+    /* --- CHAT BALONCUĞU STİLLERİ --- */
+    /* Kullanıcı mesajları (Sağda yuvarlak balon) */
+    [data-testid="stChatMessage"]:has(div[aria-label="user"]) {
+        flex-direction: row-reverse;
+        text-align: right;
+    }
+    [data-testid="stChatMessage"]:has(div[aria-label="user"]) .st-emotion-cache-1c7y2kd {
+        background-color: #f1f1f3;
+        border-radius: 20px 20px 0px 20px;
+        padding: 12px 18px;
+        display: inline-block;
+        max-width: 80%;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    /* Asistan (Berko) mesajları (Solda düz, sade yazı akışı) */
+    [data-testid="stChatMessage"]:has(div[aria-label="assistant"]) {
+        text-align: left;
+    }
+    [data-testid="stChatMessage"]:has(div[aria-label="assistant"]) .st-emotion-cache-1c7y2kd {
+        background-color: transparent;
+        padding: 8px 0px;
+        box-shadow: none;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -50,7 +73,7 @@ if "logged_in" not in st.session_state:
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
 
-# Sidebar (Yan Menü) - Sadeleştirilmiş ve şık
+# Sidebar (Yan Menü) - Sade
 with st.sidebar:
     st.title("🧑‍💻 Berko AI")
     st.caption("Yapay Zeka Asistanın")
@@ -78,7 +101,7 @@ with st.sidebar:
     st.markdown("🎨 Flux Kalitesinde Görsel Çizimi")
     st.markdown("📷 Fotoğraf Analizi")
 
-# --- ANA SOHBET EKRANI ---
+# --- ANA SOHBET Ekrani ---
 st.title("🧑‍💻 Berko AI Stüdyosu")
 st.write("Kanka selam! Sana nasıl yardımcı olabilirim? Bir şeyler sor, kod yazdıralım veya görsel çizdirelim.")
 
@@ -96,7 +119,7 @@ if "berko_messages" not in st.session_state:
     st.session_state.berko_messages = [
         {
             "role": "system",
-            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek ve teknkten anlayan bir AI asistanısın."
+            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek ve teknikten anlayan bir AI asistanısın."
         }
     ]
 
