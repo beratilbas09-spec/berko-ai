@@ -1,8 +1,9 @@
 
 import streamlit as st
 from groq import Groq
-from google import genai
-from google.genai import types
+import urllib.parse
+import requests
+import json
 
 # Sayfa Ayarları
 st.set_page_config(
@@ -36,7 +37,7 @@ with st.sidebar:
             st.rerun()
             
     st.divider()
-    st.write("Sohbet: Groq (Llama 3.3) | Resim: Google Gemini")
+    st.write("Sohbet: Groq | Resim: Google Imagen API")
 
 # --- ANA SOHBET EKRANI ---
 st.title("🧑‍💻 Berko ile Sohbet Et")
@@ -47,12 +48,10 @@ groq_api_key = st.secrets.get("GROQ_API_KEY")
 gemini_api_key = st.secrets.get("GEMINI_API_KEY")
 
 if not groq_api_key or not gemini_api_key:
-    st.error("API anahtarları eksik! Lütfen Streamlit Secrets'a GROQ_API_KEY ve GEMINI_API_KEY ekle.")
+    st.error("API anahtarları eksik! Streamlit Secrets'a GROQ_API_KEY ve GEMINI_API_KEY eklediğinden emin ol.")
     st.stop()
 
-# İstemcileri Başlat
 client = Groq(api_key=groq_api_key)
-google_client = genai.Client(api_key=gemini_api_key)
 
 # Sohbet Geçmişini Başlat
 if "messages" not in st.session_state:
@@ -68,14 +67,8 @@ for message in st.session_state.messages:
     if message["role"] != "system":
         with st.chat_message(message["role"]):
             if message.get("type") == "image":
-                image_data = message["content"]
-                st.image(image_data, caption="Berko'nun Eseri")
-                st.download_button(
-                    label="📥 Resmi Bilgisayara İndir",
-                    data=image_data,
-                    file_name="berko_gemini_eseri.png",
-                    mime="image/png",
-                )
+                image_url = message["content"]
+                st.image(image_url, caption="Berko'nun Eseri")
             else:
                 st.markdown(message["content"])
 
@@ -108,29 +101,34 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
                             st.markdown(temiz_yanit)
                             st.session_state.messages.append({"role": "assistant", "content": temiz_yanit})
                         
-                        # Google Imagen modeliyle resmi üret
-                        result = google_client.models.generate_images(
-                            model='imagen-3.0-generate-002',
-                            prompt=resim_promptu,
-                            config=types.GenerateImagesConfig(
-                                number_of_images=1,
-                                output_mime_type="image/png",
-                                aspect_ratio="1:1",
-                            )
-                        )
+                        # Google'ın Imagen 3 API'sine direkt HTTP isteği atıyoruz (Kütüphane gerektirmez!)
+                        url = f"https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key={gemini_api_key}"
+                        headers = {"Content-Type": "application/json"}
+                        payload = {
+                            "instances": [{"prompt": resim_promptu}],
+                            "parameters": {"sampleCount": 1, "aspectRatio": "1:1"}
+                        }
                         
-                        for generated_image in result.generated_images:
-                            image_bytes = generated_image.image.image_bytes
+                        response = requests.post(url, headers=headers, data=json.dumps(payload))
+                        
+                        if response.status_code == 200:
+                            res_json = response.json()
+                            base64_img = res_json["predictions"][0]["bytesBase64Encoded"]
                             
-                            st.image(image_bytes, caption=f"Berko'nun Eseri: {resim_promptu}")
+                            import base64
+                            img_bytes = base64.b64decode(base64_img)
+                            
+                            st.image(img_bytes, caption=f"Berko'nun Eseri: {resim_promptu}")
                             st.download_button(
                                 label="📥 Resmi Bilgisayara İndir",
-                                data=image_bytes,
-                                file_name="berko_gemini_eseri.png",
-                                mime="image/png",
+                                data=img_bytes,
+                                file_name="berko_gemini.png",
+                                mime="image/png"
                             )
                             
-                            st.session_state.messages.append({"role": "assistant", "content": image_bytes, "type": "image"})
+                            st.session_state.messages.append({"role": "assistant", "content": img_bytes, "type": "image"})
+                        else:
+                            st.error(f"Google API Hatası: {response.text}")
                 else:
                     st.markdown(berko_yaniti)
                     st.session_state.messages.append({"role": "assistant", "content": berko_yaniti})
