@@ -2,7 +2,6 @@
 import streamlit as st
 from groq import Groq
 import urllib.parse
-import requests
 
 # Sayfa Ayarları
 st.set_page_config(
@@ -61,19 +60,12 @@ if "messages" not in st.session_state:
     ]
 
 # Geçmiş Mesajları Ekrana Yazdır
-for i, message in enumerate(st.session_state.messages):
+for message in st.session_state.messages:
     if message["role"] != "system":
         with st.chat_message(message["role"]):
             if message.get("type") == "image":
-                img_bytes = message["content"]
-                st.image(img_bytes, caption="Berko'nun Eseri")
-                st.download_button(
-                    label="📥 Resmi Bilgisayara İndir",
-                    data=img_bytes,
-                    file_name="berko_resim.jpg",
-                    mime="image/jpeg",
-                    key=f"history_img_{i}"
-                )
+                image_url = message["content"]
+                st.image(image_url, caption="Berko'nun Eseri (Resmin sağ üstündeki simgeden indirebilirsin)")
             else:
                 st.markdown(message["content"])
 
@@ -106,26 +98,13 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
                             st.markdown(temiz_yanit)
                             st.session_state.messages.append({"role": "assistant", "content": temiz_yanit})
                         
-                        # Resmi doğrudan bayt (binary) olarak indir
+                        # Doğrudan URL ile resmi basıyoruz, hata riski sıfır!
                         encoded_prompt = urllib.parse.quote(resim_promptu)
                         pollinations_url = f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&nologo=true"
                         
-                        img_response = requests.get(pollinations_url)
-                        if img_response.status_code == 200:
-                            img_bytes = img_response.content
-                            
-                            st.image(img_bytes, caption=resim_promptu)
-                            st.download_button(
-                                label="📥 Resmi Bilgisayara İndir",
-                                data=img_bytes,
-                                file_name="berko_resim.jpg",
-                                mime="image/jpeg",
-                                key="new_img_download"
-                            )
-                            
-                            st.session_state.messages.append({"role": "assistant", "content": img_bytes, "type": "image"})
-                        else:
-                            st.error("Resim oluşturulamadı, sunucu yoğun.")
+                        st.image(pollinations_url, caption=f"Berko'nun Eseri: {resim_promptu}")
+                        
+                        st.session_state.messages.append({"role": "assistant", "content": pollinations_url, "type": "image"})
                 else:
                     st.markdown(berko_yaniti)
                     st.session_state.messages.append({"role": "assistant", "content": berko_yaniti})
