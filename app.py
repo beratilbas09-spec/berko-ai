@@ -15,8 +15,10 @@ st.set_page_config(
     layout="centered"
 )
 st.markdown(
-    '<meta name="google-site-verification" content="<meta name="google-site-verification" content="QHKdEcPEf68ahnKS-ncSUNcbOKoYDH4Z_g0yBYCmc4Y" />" />',
+    '<meta name="google-site-verification"'
+    ' content="QHKDcPEF68ahnKS-ncSUNbOKoYDH4Z_g0yBYCmC4Y" />',
     unsafe_allow_html=True,
+
 )
 # --- ÖZEL MODERN CSS VE CHAT BALONLARI ---
 st.markdown("""
