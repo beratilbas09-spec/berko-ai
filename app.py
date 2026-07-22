@@ -6,7 +6,7 @@ import base64
 
 # Sayfa Ayarları
 st.set_page_config(
-    page_title="Berko AI | Gemini Resimli",
+    page_title="Berko AI | Babadır",
     page_icon="🧑‍💻",
 )
 
@@ -50,8 +50,14 @@ if not groq_api_key or not gemini_api_key:
     st.error("API anahtarları eksik! Streamlit Secrets'a GROQ_API_KEY ve GEMINI_API_KEY eklediğinden emin ol.")
     st.stop()
 
+# İstemciyi Başlat (Hata vermemesi için API anahtarını doğru veriyoruz)
+try:
+    google_client = genai.Client(api_key=gemini_api_key)
+except Exception as e:
+    st.error(f"Google istemcisi başlatılamadı: {e}")
+    st.stop()
+
 client = Groq(api_key=groq_api_key)
-google_client = genai.Client(api_key=gemini_api_key)
 
 # Sohbet Geçmişini Başlat
 if "messages" not in st.session_state:
@@ -108,13 +114,15 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
                             st.markdown(temiz_yanit)
                             st.session_state.messages.append({"role": "assistant", "content": temiz_yanit})
                         
-                        # Google'ın en güncel resmi görsel üretim fonksiyonu
-                        result = google_client.models.generate_images(
-                            model='imagen-3.0-generate-002',
-                            prompt=resim_promptu,
-                            config=dict(number_of_images=1, output_mime_type="image/png")
-                        )
-                        
+                        # --- GÜNCEL GOOGLE IMAGE MODELI ---
+                        # Şu an aktif olan doğru model ismi: 'imagen-3.0-generate-002'
+                        with st.spinner("Google Imagen 3.0 çiziyor..."):
+                            result = google_client.models.generate_images(
+                                model='imagen-3.0-generate-002',
+                                prompt=resim_promptu,
+                                config=dict(number_of_images=1, output_mime_type="image/png")
+                            )
+                            
                         for generated_image in result.generated_images:
                             img_bytes = generated_image.image.image_bytes
                             
@@ -138,3 +146,4 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
                     
             except Exception as e:
                 st.error(f"Hata oluştu: {e}")
+                st.info("Eğer bu hata devam ederse Google AI Studio API kotası dolmuş olabilir.")
