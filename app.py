@@ -1,7 +1,8 @@
 
 import streamlit as st
 from groq import Groq
-# OpenAI kütüphanesini kaldırdık, artık gerek yok.
+import urllib.parse
+import requests
 
 # Sayfa Ayarları
 st.set_page_config(
@@ -23,7 +24,6 @@ with st.sidebar:
     if not st.session_state.logged_in:
         st.info("Geçmiş sohbetler için giriş yap.")
         if st.button("🌐 Google ile Giriş Yap", use_container_width=True):
-            # Simüle edilmiş Google girişi
             st.session_state.logged_in = True
             st.session_state.user_email = "berkouser@gmail.com" 
             st.rerun()
@@ -37,7 +37,6 @@ with st.sidebar:
             
     st.divider()
     st.write("Resimler ücretsiz Pollinations AI ile oluşturulur.")
-
 
 # --- ANA SOHBET EKRANI ---
 st.title("🧑‍💻 Berko ile Sohbet Et")
@@ -57,66 +56,85 @@ if "messages" not in st.session_state:
     st.session_state.messages = [
         {
             "role": "system",
-            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek bir AI asistanısın. Resim yapma isteği aldığında, 'Hemen hallediyorum kanka!' gibi bir tepki verip, ardından şu formatta bir metin yazarak resmi oluşturmalısın: [RESİM OLUŞTUR: kullanıcını_resim_isteği]. Bu özel etiketi sakın unutma."
+            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek bir AI asistanısın. Kullanıcı senden resim yapmanı istediğinde sadece kısa bir cümle kur ve ardından kesinlikle şu formatta resmi belirt: [RESİM: ingilizce_resim_aciklamasi]. Örnek: [RESİM: a cute cat playing guitar]. Başka hiçbir şey yazma."
         }
     ]
 
 # Geçmiş Mesajları Ekrana Yazdır
-for message in st.session_state.messages:
+for i, message in enumerate(st.session_state.messages):
     if message["role"] != "system":
         with st.chat_message(message["role"]):
-            # Metin içeriğini göster
-            st.markdown(message["content"])
-            
-            # Eğer bu bir resim URL'i ise, resmi ve indirme butonunu göster
             if message.get("type") == "image":
                 image_url = message["content"]
                 st.image(image_url, caption="Berko'nun eseri")
-                st.markdown(f"[📥 Resmi İndir]({image_url})", unsafe_allow_html=True)
+                
+                # Doğrudan indirme butonu
+                try:
+                    img_data = requests.get(image_url).content
+                    st.download_button(
+                        label="📥 Resmi Bilgisayara İndir",
+                        data=img_data,
+                        file_name="berko_eseri.png",
+                        mime="image/png",
+                        key=f"history_download_{i}"
+                    )
+                except:
+                    st.write("İndirme butonu hazırlanamadı.")
+            else:
+                st.markdown(message["content"])
 
 # Kullanıcıdan Mesaj Al
 if prompt := st.chat_input("Berko'ya bir şeyler yaz..."):
-    # Kullanıcı mesajını kaydet ve göster
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
         
     with st.chat_message("assistant"):
-        with st.spinner("Berko düşünüyor..."):
+        with st.spinner("Berko düşünüyor ve çiziyor..."):
             try:
-                # Groq'dan yanıt al
                 chat_completion = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=st.session_state.messages,
                     temperature=0.7,
                 )
                 berko_yaniti = chat_completion.choices[0].message.content
-                st.markdown(berko_yaniti)
-                st.session_state.messages.append({"role": "assistant", "content": berko_yaniti})
-
-                # --- ÜCRETSİZ RESİM OLUŞTURMA KONTROLÜ (Pollinations AI) ---
-                if "[RESİM OLUŞTUR:" in berko_yaniti:
-                    # Metin içinden resmi oluşturacak isteği ayıkla
-                    start_tag = "[RESİM OLUŞTUR:"
-                    end_tag = "]"
-                    start_index = berko_yaniti.find(start_tag) + len(start_tag)
-                    end_index = berko_yaniti.find(end_tag, start_index)
+                
+                # Resim etiketini kontrol et ve ayıkla
+                if "[RESİM:" in berko_yaniti:
+                    start_idx = berko_yaniti.find("[RESİM:") + len("[RESİM:")
+                    end_idx = berko_yaniti.find("]", start_idx)
                     
-                    if end_index > start_index:
-                        resim_istege = berko_yaniti[start_index:end_index].strip()
+                    if end_idx > start_idx:
+                        resim_promptu = berko_yaniti[start_idx:end_idx].strip()
+                        temiz_yanit = berko_yaniti[:berko_yaniti.find("[RESİM:")].strip()
                         
-                        # Ücretsiz Pollinations AI resim URL'ini oluştur
-                        import urllib.parse
-                        encoded_prompt = urllib.parse.quote(resim_istege)
-                        # width/height ile boyutu ayarla
+                        if temiz_yanit:
+                            st.markdown(temiz_yanit)
+                            st.session_state.messages.append({"role": "assistant", "content": temiz_yanit})
+                        
+                        # Pollinations AI URL oluştur
+                        encoded_prompt = urllib.parse.quote(resim_promptu)
                         pollinations_url = f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&nologo=true"
                         
-                        st.write("✨ İşte eserin kanka!")
-                        st.image(pollinations_url, caption=resim_istege)
-                        st.markdown(f"[📥 Resmi İndir]({pollinations_url})", unsafe_allow_html=True)
-
-                        # Sohbet geçmişine resim URL'ini kaydet (type='image')
+                        st.image(pollinations_url, caption=resim_promptu)
+                        
+                        # Gerçek indirme butonu
+                        try:
+                            img_data = requests.get(pollinations_url).content
+                            st.download_button(
+                                label="📥 Resmi Bilgisayara İndir",
+                                data=img_data,
+                                file_name="berko_eseri.png",
+                                mime="image/png",
+                                key=f"new_download"
+                            )
+                        except:
+                            st.write("İndirilemedi.")
+                        
                         st.session_state.messages.append({"role": "assistant", "content": pollinations_url, "type": "image"})
-            
+                else:
+                    st.markdown(berko_yaniti)
+                    st.session_state.messages.append({"role": "assistant", "content": berko_yaniti})
+                    
             except Exception as e:
                 st.error(f"Hata oluştu: {e}")
