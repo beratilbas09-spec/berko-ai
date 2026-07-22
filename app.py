@@ -1,5 +1,4 @@
 
-
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -139,19 +138,24 @@ if not groq_api_key:
 
 client = Groq(api_key=groq_api_key)
 
-# --- SOL ALT (+) ARTI BUTONU İLE MEDYA YÜKLEME MENÜSÜ ---
-media_type = st.radio("Medya Ekle (+)", ["Metin", "Fotoğraf Yükle", "Video Yükle"], horizontal=True, label_visibility="collapsed")
+# --- CHAT ALANI ÜSTÜNDE TEMİZ EXPANDER (ARTI MENÜSÜ) ---
+with st.expander("➕ Medya Ekle (Fotoğraf / Video)"):
+    media_secim = st.radio("Seçimini yap:", ["Hiçbiri", "Fotoğraf Yükle", "Video Yükle"], horizontal=True)
 
 uploaded_file = None
-if media_type == "Fotoğraf Yükle":
+media_type_str = "Metin"
+
+if media_secim == "Fotoğraf Yükle":
     uploaded_file = st.file_uploader("Bir fotoğraf seç:", type=["png", "jpg", "jpeg"])
-elif media_type == "Video Yükle":
+    media_type_str = "Fotoğraf"
+elif media_secim == "Video Yükle":
     uploaded_file = st.file_uploader("Bir video seç:", type=["mp4", "mov", "avi"])
+    media_type_str = "Video"
 
 uploaded_file_base64 = None
 if uploaded_file is not None:
     file_bytes = uploaded_file.read()
-    if media_type == "Fotoğraf Yükle":
+    if media_secim == "Fotoğraf Yükle":
         st.image(uploaded_file, caption="Yüklenen Görsel", width=300)
     else:
         st.video(uploaded_file)
@@ -172,7 +176,7 @@ for message in st.session_state.berko_display:
 if prompt := st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir..."):
     
     if uploaded_file_base64:
-        display_text = f"[{media_type}] {prompt}"
+        display_text = f"[{media_type_str} Yüklendi] {prompt}"
         st.session_state.berko_display.append({"role": "user", "content": display_text})
         st.markdown(f'<div class="user-bubble">{display_text}</div>', unsafe_allow_html=True)
             
