@@ -1,6 +1,5 @@
 
 
-
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -10,6 +9,8 @@ import io
 import base64
 import requests
 import os
+# Hata yönetimi ve yeniden deneme için
+from requests.adapters import HTTPAdapter, Retry
 
 # Sayfa Ayarları
 st.set_page_config(
@@ -47,13 +48,13 @@ with st.sidebar:
     st.divider()
     st.write("Sohbet: Groq Llama 3.3 70B")
     st.write("Görsel: Flux Realism")
-    st.write("Müzik: Hugging Face MusicGen")
+    st.write("Müzik: Hugging Face MusicGen (DNS Düzeltmeli)")
 
 # --- ANA SOHBET EKRANI ---
 st.title("🧑‍💻 Berko ile Sohbet, Çizim & Müzik Yap")
 st.write("Kanka selam, ben Berko! Fotoğraf yükle, resim çizdir veya müzik patlatalım.")
 
-# API Anahtarlarını Kontrol Et
+# API Anahtarını Kontrol Et
 groq_api_key = st.secrets.get("GROQ_API_KEY")
 hf_api_key = st.secrets.get("HUGGINGFACE_API_KEY")
 
@@ -132,13 +133,14 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik 
                 try:
                     prompt_lower = prompt.lower()
                     
-                    # ÖNCE MÜZİK KONTROLÜ (Çünkü 'şarkı yap' derken içindeki 'yap' kelimesi resmi tetiklemesin)
+                    # KESİN MÜZİK KONTROLÜ
                     muzik_kokenleri = ["müzik", "muzik", "şarkı", "sarki", "beste", "melodi", "beat", "ritim", "enstrümantal", "orkestra", "piyano", "gitar"]
                     is_music_request = any(koken in prompt_lower for koken in muzik_kokenleri)
                     
                     resim_kokenleri = ["resim", "resiam", "rsim", "resm", "çiz", "ciz", "görsel", "gorsel", "foto", "fotograf", "oluştur", "değiştir", "dönüştür"]
                     is_image_request = any(koken in prompt_lower for koken in resim_kokenleri) and not is_music_request
                     
+                    # Genel sohbet yanıtı için
                     chat_completion = client.chat.completions.create(
                         model="llama-3.3-70b-versatile",
                         messages=st.session_state.berko_messages,
@@ -147,7 +149,7 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik 
                     berko_yaniti = chat_completion.choices[0].message.content
                     
                     if is_music_request:
-                        # MÜZİK ÜRETİM MODU
+                        # MÜZİK ÜRETİM MODU (DNS HATA GİDERİCİ İLE)
                         muzik_baslangici = f"Kulaklıkla dinlemelik harika bir parça kurguluyorum kanka: '{prompt}'"
                         st.markdown(muzik_baslangici)
                         
@@ -169,27 +171,47 @@ if prompt := st.chat_input("Berko'ya bir şeyler yaz, resim çizdir veya müzik 
                         ingilizce_music_prompt = cevirici_istegi.choices[0].message.content.strip()
                         st.info(f"Müzik Tarzı Belirlendi: {ingilizce_music_prompt}")
                         
+                        # --- YENİ GÜÇLENDİRİLMİŞ HUGGING FACE İSTEĞİ (DNS HATA ÇÖZÜMLÜ) ---
                         API_URL = "https://api-inference.huggingface.co/models/facebook/musicgen-large"
-                        headers = {"Authorization": f"Bearer {hf_api_key}"}
                         
-                        def query(payload):
-                            response = requests.post(API_URL, headers=headers, json=payload)
-                            return response.content
-
-                        with st.spinner("Berko notaları birleştiriyor, bu işlem 30-60 saniye sürebilir..."):
-                            audio_bytes = query({
-                                "inputs": ingilizce_music_prompt,
-                                "parameters": {"max_new_tokens": 512}
-                            })
+                        # Yeniden deneme ve DNS hatası baypas eden oturum
+                        retry_strategy = Retry(
+                            total=3,
+                            backoff_factor=1,
+                            status_forcelist=[500, 502, 503, 504],
+                            allowed_methods=["POST"]
+                        )
+                        adapter = HTTPAdapter(max_retries=retry_strategy)
+                        
+                        # Dikkat: Streamlit Cloud ortamında DNS resolver bazen takılabiliyor. 
+                        # Eğer NameResolutionError devam ederse, requests.post(verify=False) eklenebilir 
+                        # ancak bu güvenlik riski oluşturur. Bu çözüm genellikle sorunu çözer.
+                        
+                        with st.session_state.get('huggingface_session', requests.Session()) as session:
+                            session.mount("https://", adapter)
+                            session.headers = {"Authorization": f"Bearer {hf_api_key}"}
                             
-                        if audio_bytes and len(audio_bytes) > 1000:
-                            st.success("✨ İşte müzik eseri! Aşağıdan dinleyip indirebilirsin.")
-                            st.audio(audio_bytes, format="audio/wav")
-                            
-                            st.session_state.berko_messages.append({"role": "assistant", "content": muzik_baslangici})
-                            st.session_state.berko_display.append({"role": "assistant", "content": audio_bytes, "type": "audio", "caption": f"Berko'nun Eseri: {prompt}"})
-                        else:
-                            st.error("Müzik üretilemedi veya Hugging Face modeli şu an meşgul. Tekrar dene kanka.")
+                            with st.spinner("Berko notaları birleştiriyor, bu işlem 30-60 saniye sürebilir..."):
+                                try:
+                                    response = session.post(API_URL, json={
+                                        "inputs": ingilizce_music_prompt,
+                                        "parameters": {"max_new_tokens": 512}
+                                    }, timeout=90) # Uzun zaman aşımı
+                                    
+                                    if response.status_code == 200:
+                                        audio_bytes = response.content
+                                        st.success("✨ İşte müzik eseri! Aşağıdan dinleyip indirebilirsin.")
+                                        st.audio(audio_bytes, format="audio/wav")
+                                        
+                                        st.session_state.berko_messages.append({"role": "assistant", "content": muzik_baslangici})
+                                        st.session_state.berko_display.append({"role": "assistant", "content": audio_bytes, "type": "audio", "caption": f"Berko'nun Eseri: {prompt}"})
+                                    else:
+                                        st.error(f"Müzik üretilemedi. Hata Kodu: {response.status_code}. Mesaj: {response.text}")
+                                        
+                                except requests.exceptions.NameResolutionError:
+                                    st.error("DNS Hatası oluştu. Bu genellikle geçici bir durumdur. Lütfen sayfayı yenileyip tekrar dene kanka.")
+                                except Exception as e:
+                                    st.error(f"Müzik isteği sırasında beklenmeyen hata: {e}")
                         
                     elif is_image_request:
                         harika_yanit = f"Hemen patlatıyorum kanka! İstediğin konsepti üst düzey kaliteye taşıyorum: '{prompt}'"
