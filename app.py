@@ -1,6 +1,5 @@
 
 
-
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -21,7 +20,7 @@ st.html(
     '<meta name="google-site-verification" content="QHKDcPEF68ahnKS-ncSUNbOKoYDH4Z_g0yBYCmC4Y" />'
 )
 
-# --- ÖZEL MODERN CSS, CHAT BALONLARI VE STREAMLIT LOGO/GITHUB GİZLEME ---
+# --- ÖZEL MODERN CSS VE INPUT ALANINI DİBE SABİTLEME ---
 st.markdown("""
     <style>
     /* Sağ üstteki GitHub reposu, Fork butonu ve Streamlit menülerini tamamen gizle */
@@ -90,13 +89,28 @@ st.markdown("""
         100% { opacity: 0.4; }
     }
 
-    /* Artı butonunu input kutusu ile dikeyde ortala */
-    [data-testid="column"]:has(button[kind="secondary"]) {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        padding-top: 24px;
+    /* Sohbet geçmişi alanına alttan boşluk bırak (yazı kutusu üstünü kapatmasın diye) */
+    .block-container {
+        padding-bottom: 120px;
+    }
+
+    /* Giriş ve Artı butonunun olduğu container'ı sayfanın altına sabitle */
+    .fixed-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background-color: #ffffff;
+        padding: 10px 20px;
+        z-index: 999;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+    }
+    
+    /* Dark mode uyumu için arkaplan ayarı */
+    @media (prefers-color-scheme: dark) {
+        .fixed-footer {
+            background-color: #0e1117;
+        }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -172,7 +186,8 @@ for message in st.session_state.berko_display:
         else:
             st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
 
-# --- ALT KISIM: INPUT VE ARTI BUTONU YAN YANA VE ORTalanmış ---
+# --- ALT KISIM: INPUT VE ARTI BUTONU DİBE SABİTLENMİŞ ALAN ---
+st.markdown('<div class="fixed-footer">', unsafe_allow_html=True)
 col_plus, col_input = st.columns([0.07, 0.93])
 
 uploaded_file_base64 = None
@@ -198,6 +213,8 @@ with col_plus:
 
 with col_input:
     prompt = st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir...")
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 if prompt:
     if uploaded_file_base64:
