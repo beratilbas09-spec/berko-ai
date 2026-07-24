@@ -1,5 +1,6 @@
 
 
+
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -10,8 +11,8 @@ import base64
 
 # Sayfa Ayarları
 st.set_page_config(
-    page_title="Berko AI/TR",
-    page_icon="",
+    page_title="Berko AI Studio",
+    page_icon="💻",
     layout="centered"
 )
 
@@ -223,7 +224,7 @@ if prompt:
         st.markdown(f'<div class="user-bubble">{prompt}</div>', unsafe_allow_html=True)
             
         thinking_placeholder = st.empty()
-        thinking_placeholder.markdown('<div class="thinking-text">düşünüyorum aw bekle biraz</div>', unsafe_allow_html=True)
+        thinking_placeholder.markdown('<div class="thinking-text">düşünüyorum aw bekle</div>', unsafe_allow_html=True)
         time.sleep(1.8)
         
         try:
