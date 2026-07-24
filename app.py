@@ -2,6 +2,7 @@
 
 
 
+
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -10,10 +11,10 @@ from PIL import Image
 import io
 import base64
 
-# Sayfa Ayarları
+# Sayfa Ayarları (Yüklediğin jpeg dosyasını buraya ekledik kanka)
 st.set_page_config(
     page_title="Berko AI Studio",
-    page_icon="💻",
+    page_icon="bane.jpeg",
     layout="centered"
 )
 
