@@ -2,7 +2,6 @@
 
 
 
-
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -185,7 +184,7 @@ for message in st.session_state.berko_display:
             if message.get("text"):
                 st.markdown(f'<div class="user-bubble">{message["text"]}</div>', unsafe_allow_html=True)
         else:
-                st.markdown(f'<div class="user-bubble">{message["content"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="user-bubble">{message["content"]}</div>', unsafe_allow_html=True)
     else:
         if message.get("type") == "image":
             st.markdown(f'<div class="berko-response"><b>Berko:</b></div>', unsafe_allow_html=True)
@@ -227,9 +226,9 @@ if prompt:
         time.sleep(1.5)
         
         try:
-            # --- KESİN ÇÖZÜM: LLAMA VISION MODELİ (İÇ SES KUSMA RİSKİ YOK) ---
+            # --- DOĞRU VE ÇALIŞAN GROQ VISION MODELİ ---
             vision_completion = client.chat.completions.create(
-                model="meta-llama/llama-3.2-11b-vision-instruct",
+                model="llama-3.2-11b-vision-preview",
                 messages=[
                     {
                         "role": "system",
