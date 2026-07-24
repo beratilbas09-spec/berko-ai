@@ -133,7 +133,7 @@ with st.sidebar:
     st.markdown("Akillis Sohbet & Kodlama")
     st.markdown("Flux Kalitesinde Gorsel Cizimi")
 
-# Hafıza Başlangıcı (Messi Kuralı Eklendi)
+# Hafıza Başlangıcı (Messi Kuralı ve Kuralları İçerir)
 if "berko_messages" not in st.session_state:
     st.session_state.berko_messages = [
         {
@@ -145,7 +145,7 @@ if "berko_messages" not in st.session_state:
 if "berko_display" not in st.session_state:
     st.session_state.berko_display = []
 
-# --- AKILLI BAŞLIK (Sadece hiç mesaj atılmadıysa görünür) ---
+# --- AKILLI BAŞLIK ---
 if len(st.session_state.berko_display) == 0:
     st.title("Berko AI Stüdyosu")
     st.write("Kanka selam! Sana nasıl yardımcı olabilirim? Bir şeyler sor, kod yazdıralım veya görsel çizdirelim.")
@@ -153,7 +153,7 @@ if len(st.session_state.berko_display) == 0:
 groq_api_key = "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"
 client = Groq(api_key=groq_api_key)
 
-# Ekrana Geçmiş Mesajları HTML Baloncukları Olarak Yazdır
+# Ekrana Geçmiş Mesajları Yazdır
 for message in st.session_state.berko_display:
     if message["role"] == "user":
         st.markdown(f'<div class="user-bubble">{message["content"]}</div>', unsafe_allow_html=True)
@@ -164,32 +164,28 @@ for message in st.session_state.berko_display:
         else:
             st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
 
-# --- ALT KISIM: INPUT VE ARTI BUTONU YAN YANA (Streamlit Doğal Akışında En Altta) ---
-col_plus, col_input = st.columns([0.07, 0.93])
-
+# --- MEDYA YÜKLEME POPOVER ALANI ---
 uploaded_file_base64 = None
 media_type_str = "Metin"
 
-with col_plus:
-    with st.popover("➕"):
-        st.markdown("### Medya Seç")
-        secim = st.radio("Tür:", ["Fotoğraf Yükle", "Video Yükle"], label_visibility="collapsed")
+with st.popover("➕ Medya Ekle"):
+    secim = st.radio("Tür:", ["Fotoğraf Yükle", "Video Yükle"], label_visibility="collapsed")
+    
+    uploaded_file = None
+    if secim == "Fotoğraf Yükle":
+        uploaded_file = st.file_uploader("Fotoğraf seç", type=["png", "jpg", "jpeg"])
+        media_type_str = "Fotoğraf"
+    else:
+        uploaded_file = st.file_uploader("Video seç", type=["mp4", "mov", "avi"])
+        media_type_str = "Video"
         
-        uploaded_file = None
-        if secim == "Fotoğraf Yükle":
-            uploaded_file = st.file_uploader("Fotoğraf seç", type=["png", "jpg", "jpeg"])
-            media_type_str = "Fotoğraf"
-        else:
-            uploaded_file = st.file_uploader("Video seç", type=["mp4", "mov", "avi"])
-            media_type_str = "Video"
-            
-        if uploaded_file is not None:
-            file_bytes = uploaded_file.read()
-            uploaded_file_base64 = base64.b64encode(file_bytes).decode("utf-8")
-            st.success("Yüklendi!")
+    if uploaded_file is not None:
+        file_bytes = uploaded_file.read()
+        uploaded_file_base64 = base64.b64encode(file_bytes).decode("utf-8")
+        st.success("Yüklendi!")
 
-with col_input:
-    prompt = st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir...")
+# --- TEK VE EN ALTTA SABİT OVAL CHAT INPUT ---
+prompt = st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir...")
 
 if prompt:
     if uploaded_file_base64:
@@ -241,7 +237,7 @@ if prompt:
                 )
                 berko_yaniti = chat_completion.choices[0].message.content
             else:
-                # --- ÇİFT AŞAMALI AKIL SÜZGECİ ---
+                # --- ÇİFT AŞAMALI AKIL SÜZGECİ (İki Kere Düşünme) ---
                 cevap_1 = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=st.session_state.berko_messages,
