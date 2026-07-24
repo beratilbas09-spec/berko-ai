@@ -222,14 +222,18 @@ if prompt:
         time.sleep(1.5)
         
         try:
-            # --- GÜNCEL VISION MODELİ (qwen/qwen3.6-27b) ---
+            # --- NET VE TEMİZ VISION SORGUSU ---
             vision_completion = client.chat.completions.create(
                 model="qwen/qwen3.6-27b",
                 messages=[
                     {
+                        "role": "system",
+                        "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek bir AI asistanısın. Asla düşünce sürecini, iç sesini veya planlarını dışarı yazma. Sadece doğrudan son kullanıcıya yönelik samimi, sokak ağzına uygun yanıtı ver."
+                    },
+                    {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": f"Kanka kullanıcının yüklediği görsel ve sorduğu soru şu: '{prompt}'. Lütfen görselin içeriğini baz alarak samimi, kanka gibi bir dille yanıt ver."},
+                            {"type": "text", "text": f"Kanka şu yüklediğim görseli incele ve kullanıcıya samimi, kanka tarzında şu sorunun cevabını ver: {prompt}"},
                             {
                                 "type": "image_url",
                                 "image_url": {
@@ -264,34 +268,12 @@ if prompt:
             resim_kokenleri = ["resim", "resiam", "rsim", "resm", "çiz", "ciz", "görsel", "gorsel", "foto", "fotograf", "oluştur", "değiştir", "dönüştür"]
             is_image_request = any(koken in prompt_lower for koken in resim_kokenleri)
             
-            if is_image_request:
-                chat_completion = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=st.session_state.berko_messages,
-                    temperature=0.7,
-                )
-                berko_yaniti = chat_completion.choices[0].message.content
-            else:
-                # --- ÇİFT AŞAMALI AKIL SÜZGECİ ---
-                cevap_1 = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=st.session_state.berko_messages,
-                    temperature=0.7,
-                ).choices[0].message.content
-
-                kritik_mesajlari = st.session_state.berko_messages.copy()
-                kritik_mesajlari.append({
-                    "role": "system", 
-                    "content": f"Sen kıdemli bir denetçisin. İlk modelin ürettiği şu taslak yanıtı incele, eksikleri gider ve en kusursuz haliyle yeniden yaz: '{cevap_1}'"
-                })
-
-                cevap_2 = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=kritik_mesajlari,
-                    temperature=0.7,
-                ).choices[0].message.content
-
-                berko_yaniti = cevap_2
+            chat_completion = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=st.session_state.berko_messages,
+                temperature=0.7,
+            )
+            berko_yaniti = chat_completion.choices[0].message.content
             
             thinking_placeholder.empty()
             
