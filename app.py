@@ -177,7 +177,7 @@ groq_client = Groq(api_key="gsk_4jMdYybOkakDcf4MSgLUWGdyb3FYL8JO3PZl2GFLytfyHdoH
 
 openrouter_client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key="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",
+    api_key="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",
 )
 
 # Geçmişi Yazdır
