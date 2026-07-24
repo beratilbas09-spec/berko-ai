@@ -2,7 +2,6 @@
 
 
 
-
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -14,7 +13,7 @@ import base64
 # Sayfa Ayarları
 st.set_page_config(
     page_title="Berko AI Studio",
-    page_icon="bane.jpeg",
+    page_icon="bane.jpg",
     layout="centered"
 )
 
@@ -222,18 +221,18 @@ if prompt:
         time.sleep(1.5)
         
         try:
-            # --- NET VE TEMİZ VISION SORGUSU ---
+            # --- KESİN ÇÖZÜM: İÇ SESİ VE İNGİLİZCEYİ ENGELLEYEN VISION SORGUSU ---
             vision_completion = client.chat.completions.create(
                 model="qwen/qwen3.6-27b",
                 messages=[
                     {
                         "role": "system",
-                        "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek bir AI asistanısın. Asla düşünce sürecini, iç sesini veya planlarını dışarı yazma. Sadece doğrudan son kullanıcıya yönelik samimi, sokak ağzına uygun yanıtı ver."
+                        "content": "Asla iç sesini, düşünce sürecini, analiz planlarını veya İngilizce açıklamaları dışarı yazma. Sadece ve sadece son kullanıcıya hitaben, tamamen Türkçe, samimi ve kanka gibi konuşan, sokak ağzına sahip nihai cevabı üret."
                     },
                     {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": f"Kanka şu yüklediğim görseli incele ve kullanıcıya samimi, kanka tarzında şu sorunun cevabını ver: {prompt}"},
+                            {"type": "text", "text": f"Kanka yüklediğim fotoğrafı analiz et ve şu soruya tamamen Türkçe, samimi ve kanka tarzında cevap ver: {prompt}"},
                             {
                                 "type": "image_url",
                                 "image_url": {
