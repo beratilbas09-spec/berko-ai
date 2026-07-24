@@ -1,5 +1,6 @@
 
 
+
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -14,15 +15,23 @@ st.set_page_config(
     page_icon="💻",
     layout="centered"
 )
+
+# Google Doğrulama Kodu
 st.html(
-    '<meta name="google-site-verification"'
-    ' content="QHKDcPEF68ahnKS-ncSUNbOKoYDH4Z_g0yBYCmC4Y" />',
-
-
+    '<meta name="google-site-verification" content="QHKDcPEF68ahnKS-ncSUNbOKoYDH4Z_g0yBYCmC4Y" />'
 )
-# --- ÖZEL MODERN CSS VE CHAT BALONLARI ---
+
+# --- ÖZEL MODERN CSS, CHAT BALONLARI VE STREAMLIT LOGO/GITHUB GİZLEME ---
 st.markdown("""
     <style>
+    /* Sağ üstteki GitHub reposu, Fork butonu ve Streamlit menülerini tamamen gizle */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .stDeployButton {display:none;}
+    [data-testid="stStatusWidget"] {visibility: hidden;}
+    
+    /* Özel Sidebar Tasarımı */
     [data-testid="stSidebar"] {
         background-color: #1e1e2f;
         color: white;
