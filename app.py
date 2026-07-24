@@ -3,6 +3,7 @@
 
 
 
+
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -145,10 +146,11 @@ if len(st.session_state.berko_display) == 0:
     st.title("Berko AI Stüdyosu")
     st.write("Kanka selam! Sana nasıl yardımcı olabilirim? Bir şeyler sor, kod yazdıralım veya görsel çizdirelim.")
 
-# API Anahtarı Doğrudan Entegre Edildi
+# API Anahtarları ve İki Farklı Model Entegrasyonu (Çift Beyin Sistemi)
 groq_api_key = "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"
 
-client = Groq(api_key=groq_api_key)
+client_main = Groq(api_key=groq_api_key)
+client_critic = Groq(api_key=groq_api_key) # Aynı anahtarı kullanabilir veya farklı anahtar yazabilirsin
 
 # Ekrana Geçmiş Mesajları HTML Baloncukları Olarak Yazdır
 for message in st.session_state.berko_display:
@@ -199,7 +201,7 @@ if prompt:
         time.sleep(1.8)
         
         try:
-            analiz_istegi = client.chat.completions.create(
+            analiz_istegi = client_main.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
                     {"role": "system", "content": "Kullanıcı medya yükledi. Durduk yere Berat İlbaş'tan bahsetme."},
@@ -222,7 +224,7 @@ if prompt:
         st.markdown(f'<div class="user-bubble">{prompt}</div>', unsafe_allow_html=True)
             
         thinking_placeholder = st.empty()
-        thinking_placeholder.markdown('<div class="thinking-text">düşünüyorum aw bekle</div>', unsafe_allow_html=True)
+        thinking_placeholder.markdown('<div class="thinking-text">çift beyin düşünüyor aw bekle</div>', unsafe_allow_html=True)
         time.sleep(1.8)
         
         try:
@@ -230,12 +232,37 @@ if prompt:
             resim_kokenleri = ["resim", "resiam", "rsim", "resm", "çiz", "ciz", "görsel", "gorsel", "foto", "fotograf", "oluştur", "değiştir", "dönüştür"]
             is_image_request = any(koken in prompt_lower for koken in resim_kokenleri)
             
-            chat_completion = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=st.session_state.berko_messages,
-                temperature=0.7,
-            )
-            berko_yaniti = chat_completion.choices[0].message.content
+            if is_image_request:
+                # Görsel taleplerinde normal akış devam eder
+                chat_completion = client_main.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=st.session_state.berko_messages,
+                    temperature=0.7,
+                )
+                berko_yaniti = chat_completion.choices[0].message.content
+            else:
+                # --- ÇİFT MODEL ORTAK AKIL SİSTEMİ ---
+                # 1. Aşama: Ana Model (Llama 3.3 70B) ham cevabı üretir
+                cevap_1 = client_main.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=st.session_state.berko_messages,
+                    temperature=0.7,
+                ).choices[0].message.content
+
+                # 2. Aşama: İkinci Model (Mixtral 8x7b) birinci cevabı kontrol eder ve kusursuzlaştırır
+                kritik_mesajlari = st.session_state.berko_messages.copy()
+                kritik_mesajlari.append({
+                    "role": "system", 
+                    "content": f"Sen eleştirmen ve geliştirici bir yapay zekasın. Diğer modelin verdiği şu taslak yanıtı incele, eksikleri kapat, tonunu kullanıcıya uyumlu hale getir ve en kusursuz halini ver: '{cevap_1}'"
+                })
+
+                cevap_2 = client_critic.chat.completions.create(
+                    model="mixtral-8x7b-32768",
+                    messages=kritik_mesajlari,
+                    temperature=0.7,
+                ).choices[0].message.content
+
+                berko_yaniti = cevap_2
             
             thinking_placeholder.empty()
             
@@ -244,7 +271,7 @@ if prompt:
                 st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{harika_yanit}</div>', unsafe_allow_html=True)
                 st.session_state.berko_display.append({"role": "assistant", "content": harika_yanit})
                 
-                cevirici_istegi = client.chat.completions.create(
+                cevirici_istegi = client_main.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=[
                         {"role": "system", "content": "Sen profesyonel bir AI görsel tasarımcısısın. Fotogerçekçi, sinematik, 8k detaylı İngilizce görsel promptu ver. Sadece İngilizce promptu yaz."},
