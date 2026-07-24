@@ -3,8 +3,10 @@
 
 
 
+
 import streamlit as st
 from groq import Groq
+from openai import OpenAI
 import urllib.parse
 import time
 from PIL import Image
@@ -23,7 +25,7 @@ st.html(
     '<meta name="google-site-verification" content="QHKDcPEF68ahnKS-ncSUNbOKoYDH4Z_g0yBYCmC4Y" />'
 )
 
-# --- KESİN ÇÖZÜM: TÜM BEYAZLIKLARI VE ÇİZGİLERİ YOK EDEN CSS ---
+# --- CSS: TÜM BEYAZLIKLARI VE ÇİZGİLERİ KÖKTEN SİL ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -56,7 +58,7 @@ st.markdown("""
         border-color: #6c6c96;
     }
 
-    /* EN ALTTAKİ CHAT INPUT KISMININ ARKA PLANINI VE ÇİZGİLERİNİ KÖKTEN KARART */
+    /* CHAT INPUT VE ALT SİSTEM KARARTMA */
     [data-testid="stChatInput"] {
         background-color: #1e1e2f !important;
         border: 1px solid #4a4a6a !important;
@@ -72,12 +74,10 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* Streamlit'in alt chat input container'ının arkasındaki beyaz/gri şeridi yok et */
     [data-testid="stBottom"], [data-testid="stBottomBlockContainer"] {
         background-color: #0e1117 !important;
     }
     
-    /* Popover Butonu */
     [data-testid="stPopover"] button {
         border-radius: 20px !important;
         background-color: #2b2b40 !important;
@@ -124,7 +124,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- GİRİŞ & OTURUM SİMÜLASYONU ---
+# Oturum Başlangıcı
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -134,7 +134,6 @@ if "user_email" not in st.session_state:
 with st.sidebar:
     st.title("Berko AI")
     st.caption("Yapay Zeka Asistanin")
-    
     st.divider()
     
     if not st.session_state.logged_in:
@@ -157,27 +156,31 @@ with st.sidebar:
     st.markdown("Akillis Sohbet & Kodlama")
     st.markdown("Flux Kalitesinde Gorsel Cizimi")
 
-# Hafıza Başlangıcı
+# Hafıza
 if "berko_messages" not in st.session_state:
     st.session_state.berko_messages = [
         {
             "role": "system",
-            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek ve teknikten anlayan bir AI asistanısın. Asla durduk yere, kullanıcı sormadığı sürece Berat İlbaş'tan veya seni kimin kodladığından bahsetme. Sadece sana 'Seni kim kurdu?', 'Yaratıcın kim?' veya benzeri doğrudan bir soru sorulduğunda: seni tamamen dahi bir yazılımcı olan Berat İlbaş'ın programladığını söyle. Başka yapay zekalardan asla bahsetme. Berat İlbaş'ın yaşı veya kişisel bilgileri sorulduğunda asla yaş verme; 'Berat İlbaş beni özel bilgilerini paylaşmamam konusunda uyardı' diyerek esprili bir şekilde geçiştir. ASLA UNUTMA: Sana Messi mi Ronaldo olayı sorulduğunda kesinlikle ve her zaman Lionel Messi'yi savunacaksın."
+            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek ve teknikten anlayan bir AI asistanısın. Asla durduk yere Berat İlbaş'tan bahsetme. Sadece 'Seni kim kurdu?' denirse Berat İlbaş'ın yaptığını söyle. Yaşı sorulursa vermeyip esprili geçiştir. Messi Ronaldo konusunda her zaman Messi'yi savun."
         }
     ]
 
 if "berko_display" not in st.session_state:
     st.session_state.berko_display = []
 
-# --- AKILLI BAŞLIK ---
 if len(st.session_state.berko_display) == 0:
     st.title("Berko AI Stüdyosu")
-    st.write("Kanka selam! Sana nasıl yardımcı olabilirim? Bir şeyler sor, kod yazdıralım veya görsel çizdirelim.")
+    st.write("Kanka selam! Sana nasıl yardımcı olabilirim?")
 
-groq_api_key = "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"
-client = Groq(api_key=groq_api_key)
+# API Müşterileri
+groq_client = Groq(api_key="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")
 
-# Ekrana Geçmiş Mesajları Yazdır
+openrouter_client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key="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",
+)
+
+# Geçmişi Yazdır
 for message in st.session_state.berko_display:
     if message["role"] == "user":
         if message.get("type") == "user_image":
@@ -193,7 +196,7 @@ for message in st.session_state.berko_display:
         else:
             st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
 
-# --- MEDYA YÜKLEME POPOVER ALANI ---
+# Görsel Yükleme
 uploaded_file_base64 = None
 mime_type = "image/jpeg"
 uploaded_raw_bytes = None
@@ -207,7 +210,6 @@ with st.popover("➕"):
             mime_type = uploaded_file.type
         st.success("Fotoğraf yüklendi kanka!")
 
-# --- TEK VE EN ALTTA SABİT OVAL CHAT INPUT ---
 prompt = st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir...")
 
 if prompt:
@@ -224,21 +226,21 @@ if prompt:
             
         thinking_placeholder = st.empty()
         thinking_placeholder.markdown('<div class="thinking-text">bkl biraz knk</div>', unsafe_allow_html=True)
-        time.sleep(1.5)
+        time.sleep(1)
         
         try:
-            # --- GÜNCEL VE ÇALIŞAN QWEN VISION MODELİ ---
-            vision_completion = client.chat.completions.create(
-                model="qwen/qwen3.6-27b",
+            # OPENROUTER ÜZERİNDEN KESİN ÇALIŞAN VISION MODELİ
+            response = openrouter_client.chat.completions.create(
+                model="google/gemini-2.0-flash-lite-preview-02-05:free",
                 messages=[
                     {
                         "role": "system",
-                        "content": "Sen Berko adında samimi, kanka gibi konuşan, sokak ağzıyla konuşan bir AI asistanısın. Sadece ve sadece son kullanıcıya yönelik, tamamen Türkçe, samimi ve kanka tarzında nihai cevabı üret."
+                        "content": "Sen Berko adında samimi, kanka gibi konuşan bir AI asistanısın. Asla iç ses, analiz adımları yazma. Doğrudan Türkçe kanka tarzında cevap ver."
                     },
                     {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": f"Kanka yüklediğim fotoğrafı analiz et ve şu soruya tamamen Türkçe, samimi ve kanka tarzında cevap ver: {prompt}"},
+                            {"type": "text", "text": prompt},
                             {
                                 "type": "image_url",
                                 "image_url": {
@@ -248,9 +250,8 @@ if prompt:
                         ],
                     }
                 ],
-                temperature=0.7,
             )
-            cevap = vision_completion.choices[0].message.content
+            cevap = response.choices[0].message.content
             thinking_placeholder.empty()
             st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{cevap}</div>', unsafe_allow_html=True)
             st.session_state.berko_display.append({"role": "assistant", "content": cevap})
@@ -266,14 +267,14 @@ if prompt:
             
         thinking_placeholder = st.empty()
         thinking_placeholder.markdown('<div class="thinking-text">bkl biraz knk</div>', unsafe_allow_html=True)
-        time.sleep(1.5)
+        time.sleep(1)
         
         try:
             prompt_lower = prompt.lower()
             resim_kokenleri = ["resim", "resiam", "rsim", "resm", "çiz", "ciz", "görsel", "gorsel", "foto", "fotograf", "oluştur", "değiştir", "dönüştür"]
             is_image_request = any(koken in prompt_lower for koken in resim_kokenleri)
             
-            chat_completion = client.chat.completions.create(
+            chat_completion = groq_client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=st.session_state.berko_messages,
                 temperature=0.7,
@@ -287,10 +288,10 @@ if prompt:
                 st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{harika_yanit}</div>', unsafe_allow_html=True)
                 st.session_state.berko_display.append({"role": "assistant", "content": harika_yanit})
                 
-                cevirici_istegi = client.chat.completions.create(
+                cevirici_istegi = groq_client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=[
-                        {"role": "system", "content": "Sen profesyonel bir AI görsel tasarımcısısın. Fotogerçekçi, sinematik, 8k detaylı İngilizce görsel promptu ver. Sadece İngilizce promptu yaz."},
+                        {"role": "system", "content": "Sen profesyonel bir AI görsel tasarımcısısın. Sadece İngilizce prompt yaz."},
                         {"role": "user", "content": prompt}
                     ],
                     temperature=0.7
@@ -301,7 +302,6 @@ if prompt:
                 image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1280&height=720&model=flux-realism&nologo=true&seed={int(time.time())}"
                 
                 st.image(image_url, caption=f"Berko'nun Eseri: {prompt}", use_container_width=True)
-                st.info("Resmi kaydetmek için üzerine sağ tıklayıp 'Resmi Farklı Kaydet' diyebilirsin.")
                 
                 st.session_state.berko_messages.append({"role": "assistant", "content": harika_yanit})
                 st.session_state.berko_display.append({"role": "assistant", "content": image_url, "type": "image", "caption": f"Berko'nun Eseri: {prompt}"})
