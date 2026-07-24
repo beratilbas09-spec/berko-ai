@@ -175,7 +175,12 @@ client = Groq(api_key=groq_api_key)
 # Ekrana Geçmiş Mesajları Yazdır
 for message in st.session_state.berko_display:
     if message["role"] == "user":
-        st.markdown(f'<div class="user-bubble">{message["content"]}</div>', unsafe_allow_html=True)
+        if message.get("type") == "user_image":
+            st.image(message["content"], caption="Yüklenen Görsel", width=300)
+            if message.get("text"):
+                st.markdown(f'<div class="user-bubble">{message["text"]}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="user-bubble">{message["content"]}</div>', unsafe_allow_html=True)
     else:
         if message.get("type") == "image":
             st.markdown(f'<div class="berko-response"><b>Berko:</b></div>', unsafe_allow_html=True)
@@ -186,12 +191,13 @@ for message in st.session_state.berko_display:
 # --- MEDYA YÜKLEME POPOVER ALANI ---
 uploaded_file_base64 = None
 mime_type = "image/jpeg"
+uploaded_raw_bytes = None
 
 with st.popover("➕"):
     uploaded_file = st.file_uploader("Görsel Yükle", type=["png", "jpg", "jpeg"])
     if uploaded_file is not None:
-        file_bytes = uploaded_file.read()
-        uploaded_file_base64 = base64.b64encode(file_bytes).decode("utf-8")
+        uploaded_raw_bytes = uploaded_file.read()
+        uploaded_file_base64 = base64.b64encode(uploaded_raw_bytes).decode("utf-8")
         if uploaded_file.type:
             mime_type = uploaded_file.type
         st.success("Fotoğraf yüklendi kanka!")
@@ -201,23 +207,29 @@ prompt = st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir...")
 
 if prompt:
     if uploaded_file_base64:
-        display_text = f"[Görsel Yüklendi] {prompt}"
-        st.session_state.berko_display.append({"role": "user", "content": display_text})
-        st.markdown(f'<div class="user-bubble">{display_text}</div>', unsafe_allow_html=True)
+        st.image(uploaded_raw_bytes, caption="Yüklenen Görsel", width=300)
+        st.markdown(f'<div class="user-bubble">{prompt}</div>', unsafe_allow_html=True)
+        
+        st.session_state.berko_display.append({
+            "role": "user", 
+            "type": "user_image", 
+            "content": uploaded_raw_bytes, 
+            "text": prompt
+        })
             
         thinking_placeholder = st.empty()
         thinking_placeholder.markdown('<div class="thinking-text">bkl biraz knk</div>', unsafe_allow_html=True)
         time.sleep(1.5)
         
         try:
-            # --- SAĞLAM VISION ANALİZİ (Kararlı Llama 3.3 Versatile Modeli Üzerinden) ---
+            # --- DOĞRU VISION MODELİ (meta-llama/llama-3.2-11b-vision-instruct) ---
             vision_completion = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="meta-llama/llama-3.2-11b-vision-instruct",
                 messages=[
                     {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": f"Kanka kullanıcının yüklediği görsel ve sorduğu soru şu: '{prompt}'. Lütfen görselin içeriğini baz alarak samimi bir şekilde yanıt ver."},
+                            {"type": "text", "text": f"Kanka kullanıcının yüklediği görsel ve sorduğu soru şu: '{prompt}'. Lütfen görselin içeriğini baz alarak samimi, kanka gibi bir dille yanıt ver."},
                             {
                                 "type": "image_url",
                                 "image_url": {
@@ -260,7 +272,7 @@ if prompt:
                 )
                 berko_yaniti = chat_completion.choices[0].message.content
             else:
-                # --- ÇİFT AŞAMALI AKIL SÜZGECİ (İki Kere Düşünme) ---
+                # --- ÇİFT AŞAMALI AKIL SÜZGECİ ---
                 cevap_1 = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=st.session_state.berko_messages,
