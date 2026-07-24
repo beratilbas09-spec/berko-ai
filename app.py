@@ -14,7 +14,7 @@ import base64
 # Sayfa Ayarları
 st.set_page_config(
     page_title="Berko AI Studio",
-    page_icon="bane.jpg",
+    page_icon="bane.jpeg",
     layout="centered"
 )
 
@@ -222,9 +222,9 @@ if prompt:
         time.sleep(1.5)
         
         try:
-            # --- DOĞRU VISION MODELİ (meta-llama/llama-3.2-11b-vision-instruct) ---
+            # --- GÜNCEL VISION MODELİ (qwen/qwen3.6-27b) ---
             vision_completion = client.chat.completions.create(
-                model="meta-llama/llama-3.2-11b-vision-instruct",
+                model="qwen/qwen3.6-27b",
                 messages=[
                     {
                         "role": "user",
