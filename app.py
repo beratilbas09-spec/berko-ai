@@ -231,7 +231,7 @@ if prompt:
         try:
             # OPENROUTER ÜZERİNDEN KESİN ÇALIŞAN VISION MODELİ
             response = openrouter_client.chat.completions.create(
-                model="google/gemini-2.0-flash-lite-preview-02-05:free",
+                model="google/gemini-2.5-flash:free",
                 messages=[
                     {
                         "role": "system",
