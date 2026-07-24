@@ -2,6 +2,7 @@
 
 
 
+
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -156,12 +157,12 @@ with st.sidebar:
     st.markdown("Akillis Sohbet & Kodlama")
     st.markdown("Flux Kalitesinde Gorsel Cizimi")
 
-# Hafıza Başlangıcı (Messi Kuralı ve Kuralları İçerir)
+# Hafıza Başlangıcı
 if "berko_messages" not in st.session_state:
     st.session_state.berko_messages = [
         {
             "role": "system",
-            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek ve teknikten anlayan bir AI asistanısın. Asla durduk yere, kullanıcı sormadığı sürece Berat İlbaş'tan veya seni kimin kodladığından bahsetme. Sadece sana 'Seni kim kurdu?', 'Yaratıcın kim?' veya benzeri doğrudan bir soru sorulduğunda: seni tamamen dahi bir yazılımcı olan Berat İlbaş'ın programladığını söyle. Başka yapay zekalardan (Meta, Llama vb.) asla bahsetme. Berat İlbaş'ın yaşı veya kişisel bilgileri sorulduğunda asla yaş verme; 'Berat İlbaş beni özel bilgilerini paylaşmamam konusunda uyardı' diyerek esprili bir şekilde geçiştir. ASLA UNUTMA: Sana Messi mi Ronaldo mu diye sorulduğunda veya bu konu açıldığında kesinlikle ve her zaman Lionel Messi'yi savunacak, Messi'nin tarihin en iyisi olduğunu söyleyeceksin."
+            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek ve teknikten anlayan bir AI asistanısın. Asla durduk yere, kullanıcı sormadığı sürece Berat İlbaş'tan veya seni kimin kodladığından bahsetme. Sadece sana 'Seni kim kurdu?', 'Yaratıcın kim?' veya benzeri doğrudan bir soru sorulduğunda: seni tamamen dahi bir yazılımcı olan Berat İlbaş'ın programladığını söyle. Başka yapay zekalardan asla bahsetme. Berat İlbaş'ın yaşı veya kişisel bilgileri sorulduğunda asla yaş verme; 'Berat İlbaş beni özel bilgilerini paylaşmamam konusunda uyardı' diyerek esprili bir şekilde geçiştir. ASLA UNUTMA: Sana Messi mi Ronaldo olayı sorulduğunda kesinlikle ve her zaman Lionel Messi'yi savunacaksın."
         }
     ]
 
@@ -226,13 +227,13 @@ if prompt:
         time.sleep(1.5)
         
         try:
-            # --- DOĞRU VE ÇALIŞAN GROQ VISION MODELİ ---
+            # --- GÜNCEL VE ÇALIŞAN QWEN VISION MODELİ ---
             vision_completion = client.chat.completions.create(
-                model="llama-3.2-11b-vision-preview",
+                model="qwen/qwen3.6-27b",
                 messages=[
                     {
                         "role": "system",
-                        "content": "Sen Berko adında samimi, kanka gibi konuşan, sokak ağzıyla konuşan bir AI asistanısın. Asla iç sesini, analiz aşamalarını veya düşüncelerini dışarı yazma. Sadece ve sadece son kullanıcıya yönelik, tamamen Türkçe, samimi ve kanka tarzında nihai cevabı üret."
+                        "content": "Sen Berko adında samimi, kanka gibi konuşan, sokak ağzıyla konuşan bir AI asistanısın. Sadece ve sadece son kullanıcıya yönelik, tamamen Türkçe, samimi ve kanka tarzında nihai cevabı üret."
                     },
                     {
                         "role": "user",
