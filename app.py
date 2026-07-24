@@ -2,6 +2,7 @@
 
 
 
+
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -13,7 +14,7 @@ import base64
 # Sayfa Ayarları
 st.set_page_config(
     page_title="Berko AI Studio",
-    page_icon="bane.jpg",
+    page_icon="bane.jpeg",
     layout="centered"
 )
 
@@ -22,7 +23,7 @@ st.html(
     '<meta name="google-site-verification" content="QHKDcPEF68ahnKS-ncSUNbOKoYDH4Z_g0yBYCmC4Y" />'
 )
 
-# --- KESİN ÇÖZÜM: KOYU TEMA VE BEYAZLIK ENGELLEYİCİ CSS ---
+# --- KESİN ÇÖZÜM: TÜM BEYAZLIKLARI VE ÇİZGİLERİ YOK EDEN CSS ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -55,7 +56,7 @@ st.markdown("""
         border-color: #6c6c96;
     }
 
-    /* CHAT INPUT BEYAZLIĞINI KÖKTEN YOK EDEN KISIM */
+    /* EN ALTTAKİ CHAT INPUT KISMININ ARKA PLANINI VE ÇİZGİLERİNİ KÖKTEN KARART */
     [data-testid="stChatInput"] {
         background-color: #1e1e2f !important;
         border: 1px solid #4a4a6a !important;
@@ -69,6 +70,11 @@ st.markdown("""
     
     [data-testid="stChatInput"] div {
         background-color: transparent !important;
+    }
+
+    /* Streamlit'in alt chat input container'ının arkasındaki beyaz/gri şeridi yok et */
+    [data-testid="stBottom"], [data-testid="stBottomBlockContainer"] {
+        background-color: #0e1117 !important;
     }
     
     /* Popover Butonu */
@@ -179,7 +185,7 @@ for message in st.session_state.berko_display:
             if message.get("text"):
                 st.markdown(f'<div class="user-bubble">{message["text"]}</div>', unsafe_allow_html=True)
         else:
-            st.markdown(f'<div class="user-bubble">{message["content"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="user-bubble">{message["content"]}</div>', unsafe_allow_html=True)
     else:
         if message.get("type") == "image":
             st.markdown(f'<div class="berko-response"><b>Berko:</b></div>', unsafe_allow_html=True)
@@ -221,13 +227,13 @@ if prompt:
         time.sleep(1.5)
         
         try:
-            # --- KESİN ÇÖZÜM: İÇ SESİ VE İNGİLİZCEYİ ENGELLEYEN VISION SORGUSU ---
+            # --- KESİN ÇÖZÜM: LLAMA VISION MODELİ (İÇ SES KUSMA RİSKİ YOK) ---
             vision_completion = client.chat.completions.create(
-                model="qwen/qwen3.6-27b",
+                model="meta-llama/llama-3.2-11b-vision-instruct",
                 messages=[
                     {
                         "role": "system",
-                        "content": "Asla iç sesini, düşünce sürecini, analiz planlarını veya İngilizce açıklamaları dışarı yazma. Sadece ve sadece son kullanıcıya hitaben, tamamen Türkçe, samimi ve kanka gibi konuşan, sokak ağzına sahip nihai cevabı üret."
+                        "content": "Sen Berko adında samimi, kanka gibi konuşan, sokak ağzıyla konuşan bir AI asistanısın. Asla iç sesini, analiz aşamalarını veya düşüncelerini dışarı yazma. Sadece ve sadece son kullanıcıya yönelik, tamamen Türkçe, samimi ve kanka tarzında nihai cevabı üret."
                     },
                     {
                         "role": "user",
