@@ -138,9 +138,7 @@ if len(st.session_state.berko_display) == 0:
     st.write("Kanka selam! Sana nasıl yardımcı olabilirim? Bir şeyler sor, kod yazdıralım veya görsel çizdirelim.")
 
 groq_api_key = "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"
-
-client_main = Groq(api_key=groq_api_key)
-client_critic = Groq(api_key=groq_api_key)
+client = Groq(api_key=groq_api_key)
 
 for message in st.session_state.berko_display:
     if message["role"] == "user":
@@ -189,7 +187,7 @@ if prompt:
         time.sleep(1.8)
         
         try:
-            analiz_istegi = client_main.chat.completions.create(
+            analiz_istegi = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
                     {"role": "system", "content": "Kullanıcı medya yükledi. Durduk yere Berat İlbaş'tan bahsetme."},
@@ -212,7 +210,7 @@ if prompt:
         st.markdown(f'<div class="user-bubble">{prompt}</div>', unsafe_allow_html=True)
             
         thinking_placeholder = st.empty()
-        thinking_placeholder.markdown('<div class="thinking-text">çift beyin düşünüyor aw bekle</div>', unsafe_allow_html=True)
+        thinking_placeholder.markdown('<div class="thinking-text">çift aşamalı akıl süzgeci çalışıyor...</div>', unsafe_allow_html=True)
         time.sleep(1.8)
         
         try:
@@ -221,15 +219,15 @@ if prompt:
             is_image_request = any(koken in prompt_lower for koken in resim_kokenleri)
             
             if is_image_request:
-                chat_completion = client_main.chat.completions.create(
+                chat_completion = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=st.session_state.berko_messages,
                     temperature=0.7,
                 )
                 berko_yaniti = chat_completion.choices[0].message.content
             else:
-                # --- ÇİFT MODEL ORTAK AKIL SİSTEMİ (Gemma 2 Destekli) ---
-                cevap_1 = client_main.chat.completions.create(
+                # --- SAĞLAM ÇİFT AŞAMALI SİSTEM (Aynı kararlı model, farklı eleştirel rol) ---
+                cevap_1 = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=st.session_state.berko_messages,
                     temperature=0.7,
@@ -238,11 +236,11 @@ if prompt:
                 kritik_mesajlari = st.session_state.berko_messages.copy()
                 kritik_mesajlari.append({
                     "role": "system", 
-                    "content": f"Sen eleştirmen ve geliştirici bir yapay zekasın. Diğer modelin verdiği şu taslak yanıtı incele, eksikleri kapat, tonunu kullanıcıya uyumlu hale getir ve en kusursuz halini ver: '{cevap_1}'"
+                    "content": f"Sen kıdemli bir kod ve mantık denetçisisin. İlk modelin ürettiği şu taslak yanıtı incele, eksikleri gider ve kullanıcıya sunulacak en kusursuz, hatasız haliyle yeniden yaz: '{cevap_1}'"
                 })
 
-                cevap_2 = client_critic.chat.completions.create(
-                    model="gemma2-9b-it",
+                cevap_2 = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
                     messages=kritik_mesajlari,
                     temperature=0.7,
                 ).choices[0].message.content
@@ -256,7 +254,7 @@ if prompt:
                 st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{harika_yanit}</div>', unsafe_allow_html=True)
                 st.session_state.berko_display.append({"role": "assistant", "content": harika_yanit})
                 
-                cevirici_istegi = client_main.chat.completions.create(
+                cevirici_istegi = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=[
                         {"role": "system", "content": "Sen profesyonel bir AI görsel tasarımcısısın. Fotogerçekçi, sinematik, 8k detaylı İngilizce görsel promptu ver. Sadece İngilizce promptu yaz."},
