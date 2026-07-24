@@ -3,7 +3,6 @@
 
 
 
-
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -12,7 +11,7 @@ from PIL import Image
 import io
 import base64
 
-# Sayfa Ayarları (Yüklediğin jpeg dosyasını buraya ekledik kanka)
+# Sayfa Ayarları
 st.set_page_config(
     page_title="Berko AI Studio",
     page_icon="bane.jpeg",
@@ -27,14 +26,12 @@ st.html(
 # --- ÖZEL MODERN CSS VE STREAMLIT LOGO GİZLEME ---
 st.markdown("""
     <style>
-    /* Sağ üstteki GitHub reposu, Fork butonu ve Streamlit menülerini tamamen gizle */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     .stDeployButton {display:none;}
     [data-testid="stStatusWidget"] {visibility: hidden;}
     
-    /* Özel Sidebar Tasarımı */
     [data-testid="stSidebar"] {
         background-color: #1e1e2f;
         color: white;
@@ -53,7 +50,6 @@ st.markdown("""
         border-color: #6c6c96;
     }
 
-    /* Kullanıcı Balonu (Sağda şık gri yuvarlak kutu) */
     .user-bubble {
         background-color: #f0f2f6;
         color: #111111;
@@ -67,7 +63,6 @@ st.markdown("""
         word-wrap: break-word;
     }
 
-    /* Berko Balonu / Akışı (Solda düz yazı) */
     .berko-response {
         background-color: transparent;
         color: inherit;
@@ -79,7 +74,6 @@ st.markdown("""
         word-wrap: break-word;
     }
 
-    /* Düşünüyor animasyon yazısı */
     .thinking-text {
         color: #888888;
         font-style: italic;
@@ -102,7 +96,6 @@ if "logged_in" not in st.session_state:
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
 
-# Sidebar (Yan Menü)
 with st.sidebar:
     st.title("Berko AI")
     st.caption("Yapay Zeka Asistanin")
@@ -129,7 +122,6 @@ with st.sidebar:
     st.markdown("Akillis Sohbet & Kodlama")
     st.markdown("Flux Kalitesinde Gorsel Cizimi")
 
-# Hafıza Başlangıcı
 if "berko_messages" not in st.session_state:
     st.session_state.berko_messages = [
         {
@@ -141,18 +133,15 @@ if "berko_messages" not in st.session_state:
 if "berko_display" not in st.session_state:
     st.session_state.berko_display = []
 
-# --- AKILLI BAŞLIK (Sadece hiç mesaj atılmadıysa görünür) ---
 if len(st.session_state.berko_display) == 0:
     st.title("Berko AI Stüdyosu")
     st.write("Kanka selam! Sana nasıl yardımcı olabilirim? Bir şeyler sor, kod yazdıralım veya görsel çizdirelim.")
 
-# API Anahtarları ve İki Farklı Model Entegrasyonu (Çift Beyin Sistemi)
 groq_api_key = "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"
 
 client_main = Groq(api_key=groq_api_key)
-client_critic = Groq(api_key=groq_api_key) # Aynı anahtarı kullanabilir veya farklı anahtar yazabilirsin
+client_critic = Groq(api_key=groq_api_key)
 
-# Ekrana Geçmiş Mesajları HTML Baloncukları Olarak Yazdır
 for message in st.session_state.berko_display:
     if message["role"] == "user":
         st.markdown(f'<div class="user-bubble">{message["content"]}</div>', unsafe_allow_html=True)
@@ -163,7 +152,6 @@ for message in st.session_state.berko_display:
         else:
             st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
 
-# --- ALT KISIM: INPUT VE ARTI BUTONU YAN YANA ---
 col_plus, col_input = st.columns([0.07, 0.93])
 
 uploaded_file_base64 = None
@@ -233,7 +221,6 @@ if prompt:
             is_image_request = any(koken in prompt_lower for koken in resim_kokenleri)
             
             if is_image_request:
-                # Görsel taleplerinde normal akış devam eder
                 chat_completion = client_main.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=st.session_state.berko_messages,
@@ -241,15 +228,13 @@ if prompt:
                 )
                 berko_yaniti = chat_completion.choices[0].message.content
             else:
-                # --- ÇİFT MODEL ORTAK AKIL SİSTEMİ ---
-                # 1. Aşama: Ana Model (Llama 3.3 70B) ham cevabı üretir
+                # --- ÇİFT MODEL ORTAK AKIL SİSTEMİ (Gemma 2 Destekli) ---
                 cevap_1 = client_main.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=st.session_state.berko_messages,
                     temperature=0.7,
                 ).choices[0].message.content
 
-                # 2. Aşama: İkinci Model (Mixtral 8x7b) birinci cevabı kontrol eder ve kusursuzlaştırır
                 kritik_mesajlari = st.session_state.berko_messages.copy()
                 kritik_mesajlari.append({
                     "role": "system", 
@@ -257,7 +242,7 @@ if prompt:
                 })
 
                 cevap_2 = client_critic.chat.completions.create(
-                    model="mixtral-8x7b-32768",
+                    model="gemma2-9b-it",
                     messages=kritik_mesajlari,
                     temperature=0.7,
                 ).choices[0].message.content
