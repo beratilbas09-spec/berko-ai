@@ -11,7 +11,7 @@ import base64
 # Sayfa Ayarları
 st.set_page_config(
     page_title="Berko AI Studio",
-    page_icon="bane.jpeg",
+    page_icon="bane.jpg",
     layout="centered"
 )
 
