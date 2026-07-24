@@ -10,8 +10,8 @@ import base64
 
 # Sayfa Ayarları
 st.set_page_config(
-    page_title="Berko AI Studio",
-    page_icon="💻",
+    page_title="Berko AI/TR",
+    page_icon="",
     layout="centered"
 )
 
@@ -20,7 +20,7 @@ st.html(
     '<meta name="google-site-verification" content="QHKDcPEF68ahnKS-ncSUNbOKoYDH4Z_g0yBYCmC4Y" />'
 )
 
-# --- ÖZEL MODERN CSS VE INPUT ALANINI DİBE SABİTLEME ---
+# --- ÖZEL MODERN CSS VE STREAMLIT LOGO GİZLEME ---
 st.markdown("""
     <style>
     /* Sağ üstteki GitHub reposu, Fork butonu ve Streamlit menülerini tamamen gizle */
@@ -88,30 +88,6 @@ st.markdown("""
         50% { opacity: 1; }
         100% { opacity: 0.4; }
     }
-
-    /* Sohbet geçmişi alanına alttan boşluk bırak (yazı kutusu üstünü kapatmasın diye) */
-    .block-container {
-        padding-bottom: 120px;
-    }
-
-    /* Giriş ve Artı butonunun olduğu container'ı sayfanın altına sabitle */
-    .fixed-footer {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        background-color: #ffffff;
-        padding: 10px 20px;
-        z-index: 999;
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-    }
-    
-    /* Dark mode uyumu için arkaplan ayarı */
-    @media (prefers-color-scheme: dark) {
-        .fixed-footer {
-            background-color: #0e1117;
-        }
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -154,7 +130,7 @@ if "berko_messages" not in st.session_state:
     st.session_state.berko_messages = [
         {
             "role": "system",
-            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek ve teknikten anlayan bir AI asistanısın. Kesinlikle hiçbir yapay zeka modeline, Meta'ya veya Llama'ya bağlı olmadığını, seni tamamen dahi bir yazılımcı olan Berat İlbaş'ın programladığını ve sıfırdan inşa ettiğini söyle. Sana kim olduğunu, temellerini veya hangi yapay zekaya bağlı olduğunu sorsalar asla başka bir yapay zekadan bahsetme. Ayrıca Berat İlbaş'ın yaşı veya kişisel bilgileri hakkında soru sorulduğunda asla yaş falan verme; kesinlikle 'Berat İlbaş beni özel bilgilerini paylaşmamam konusunda uyardı ve eğer böyle bir şey olursa beni harap edeceğini söyledi' diyerek takıl."
+            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek ve teknikten anlayan bir AI asistanısın. Asla durduk yere, kullanıcı sormadığı sürece Berat İlbaş'tan veya seni kimin kodladığından bahsetme. Sadece sana 'Seni kim kurdu?', 'Yaratıcın kim?' veya benzeri doğrudan bir soru sorulduğunda: seni tamamen dahi bir yazılımcı olan Berat İlbaş'ın programladığını söyle. Başka yapay zekalardan (Meta, Llama vb.) asla bahsetme. Berat İlbaş'ın yaşı veya kişisel bilgileri sorulduğunda asla yaş verme; 'Berat İlbaş beni özel bilgilerini paylaşmamam konusunda uyardı' diyerek esprili bir şekilde geçiştir."
         }
     ]
 
@@ -186,8 +162,7 @@ for message in st.session_state.berko_display:
         else:
             st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
 
-# --- ALT KISIM: INPUT VE ARTI BUTONU DİBE SABİTLENMİŞ ALAN ---
-st.markdown('<div class="fixed-footer">', unsafe_allow_html=True)
+# --- ALT KISIM: INPUT VE ARTI BUTONU YAN YANA ---
 col_plus, col_input = st.columns([0.07, 0.93])
 
 uploaded_file_base64 = None
@@ -214,8 +189,6 @@ with col_plus:
 with col_input:
     prompt = st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir...")
 
-st.markdown('</div>', unsafe_allow_html=True)
-
 if prompt:
     if uploaded_file_base64:
         display_text = f"[{media_type_str} Yüklendi] {prompt}"
@@ -230,7 +203,7 @@ if prompt:
             analiz_istegi = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
-                    {"role": "system", "content": "Kullanıcı medya yükledi. Asla başka yapay zekalardan bahsetme, seni Berat İlbaş'ın programladığını unutma."},
+                    {"role": "system", "content": "Kullanıcı medya yükledi. Durduk yere Berat İlbaş'tan bahsetme."},
                     {"role": "user", "content": f"Medya hakkında soru/yorum: '{prompt}'"}
                 ],
                 temperature=0.7,
