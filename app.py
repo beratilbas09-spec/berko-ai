@@ -14,7 +14,7 @@ import base64
 # Sayfa Ayarları
 st.set_page_config(
     page_title="Berko AI Studio",
-    page_icon="bane.jpg",
+    page_icon="bane.jpeg",
     layout="centered"
 )
 
@@ -23,7 +23,7 @@ st.html(
     '<meta name="google-site-verification" content="QHKDcPEF68ahnKS-ncSUNbOKoYDH4Z_g0yBYCmC4Y" />'
 )
 
-# --- ÖZEL MODERN CSS VE STREAMLIT LOGO GİZLEME ---
+# --- ÖZEL MODERN CSS (Oval Input, Sabit Alt Kısım ve Logo Gizleme) ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -48,6 +48,17 @@ st.markdown("""
     .stButton button:hover {
         background-color: #3b3b5c;
         border-color: #6c6c96;
+    }
+
+    /* ChatGPT & Gemini Tarzı Oval Input Alanı */
+    [data-testid="stChatInput"] {
+        border-radius: 30px !important;
+        border: 1px solid #4a4a6a !important;
+        background-color: #1e1e2f !important;
+    }
+    
+    [data-testid="stChatInput"] textarea {
+        color: #ffffff !important;
     }
 
     .user-bubble {
@@ -122,17 +133,19 @@ with st.sidebar:
     st.markdown("Akillis Sohbet & Kodlama")
     st.markdown("Flux Kalitesinde Gorsel Cizimi")
 
+# Hafıza Başlangıcı (Messi Kuralı Eklendi)
 if "berko_messages" not in st.session_state:
     st.session_state.berko_messages = [
         {
             "role": "system",
-            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek ve teknikten anlayan bir AI asistanısın. Asla durduk yere, kullanıcı sormadığı sürece Berat İlbaş'tan veya seni kimin kodladığından bahsetme. Sadece sana 'Seni kim kurdu?', 'Yaratıcın kim?' veya benzeri doğrudan bir soru sorulduğunda: seni tamamen dahi bir yazılımcı olan Berat İlbaş'ın programladığını söyle. Başka yapay zekalardan (Meta, Llama vb.) asla bahsetme. Berat İlbaş'ın yaşı veya kişisel bilgileri sorulduğunda asla yaş verme; 'Berat İlbaş beni özel bilgilerini paylaşmamam konusunda uyardı' diyerek esprili bir şekilde geçiştir."
+            "content": "Sen Berko adında samimi, kanka gibi konuşan, mizahi zekası yüksek ve teknikten anlayan bir AI asistanısın. Asla durduk yere, kullanıcı sormadığı sürece Berat İlbaş'tan veya seni kimin kodladığından bahsetme. Sadece sana 'Seni kim kurdu?', 'Yaratıcın kim?' veya benzeri doğrudan bir soru sorulduğunda: seni tamamen dahi bir yazılımcı olan Berat İlbaş'ın programladığını söyle. Başka yapay zekalardan (Meta, Llama vb.) asla bahsetme. Berat İlbaş'ın yaşı veya kişisel bilgileri sorulduğunda asla yaş verme; 'Berat İlbaş beni özel bilgilerini paylaşmamam konusunda uyardı' diyerek esprili bir şekilde geçiştir. ASLA UNUTMA: Sana Messi mi Ronaldo mu diye sorulduğunda veya bu konu açıldığında kesinlikle ve her zaman Lionel Messi'yi savunacak, Messi'nin tarihin en iyisi olduğunu söyleyeceksin."
         }
     ]
 
 if "berko_display" not in st.session_state:
     st.session_state.berko_display = []
 
+# --- AKILLI BAŞLIK (Sadece hiç mesaj atılmadıysa görünür) ---
 if len(st.session_state.berko_display) == 0:
     st.title("Berko AI Stüdyosu")
     st.write("Kanka selam! Sana nasıl yardımcı olabilirim? Bir şeyler sor, kod yazdıralım veya görsel çizdirelim.")
@@ -140,6 +153,7 @@ if len(st.session_state.berko_display) == 0:
 groq_api_key = "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"
 client = Groq(api_key=groq_api_key)
 
+# Ekrana Geçmiş Mesajları HTML Baloncukları Olarak Yazdır
 for message in st.session_state.berko_display:
     if message["role"] == "user":
         st.markdown(f'<div class="user-bubble">{message["content"]}</div>', unsafe_allow_html=True)
@@ -150,6 +164,7 @@ for message in st.session_state.berko_display:
         else:
             st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
 
+# --- ALT KISIM: INPUT VE ARTI BUTONU YAN YANA (Streamlit Doğal Akışında En Altta) ---
 col_plus, col_input = st.columns([0.07, 0.93])
 
 uploaded_file_base64 = None
@@ -183,7 +198,7 @@ if prompt:
         st.markdown(f'<div class="user-bubble">{display_text}</div>', unsafe_allow_html=True)
             
         thinking_placeholder = st.empty()
-        thinking_placeholder.markdown('<div class="thinking-text">düşünüyorum aw bekle biraz</div>', unsafe_allow_html=True)
+        thinking_placeholder.markdown('<div class="thinking-text">bkl biraz knk</div>', unsafe_allow_html=True)
         time.sleep(1.8)
         
         try:
@@ -210,7 +225,7 @@ if prompt:
         st.markdown(f'<div class="user-bubble">{prompt}</div>', unsafe_allow_html=True)
             
         thinking_placeholder = st.empty()
-        thinking_placeholder.markdown('<div class="thinking-text">çift aşamalı akıl süzgeci çalışıyor...</div>', unsafe_allow_html=True)
+        thinking_placeholder.markdown('<div class="thinking-text">bkl biraz knk</div>', unsafe_allow_html=True)
         time.sleep(1.8)
         
         try:
@@ -226,7 +241,7 @@ if prompt:
                 )
                 berko_yaniti = chat_completion.choices[0].message.content
             else:
-                # --- SAĞLAM ÇİFT AŞAMALI SİSTEM (Aynı kararlı model, farklı eleştirel rol) ---
+                # --- ÇİFT AŞAMALI AKIL SÜZGECİ ---
                 cevap_1 = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=st.session_state.berko_messages,
@@ -236,7 +251,7 @@ if prompt:
                 kritik_mesajlari = st.session_state.berko_messages.copy()
                 kritik_mesajlari.append({
                     "role": "system", 
-                    "content": f"Sen kıdemli bir kod ve mantık denetçisisin. İlk modelin ürettiği şu taslak yanıtı incele, eksikleri gider ve kullanıcıya sunulacak en kusursuz, hatasız haliyle yeniden yaz: '{cevap_1}'"
+                    "content": f"Sen kıdemli bir denetçisin. İlk modelin ürettiği şu taslak yanıtı incele, eksikleri gider ve en kusursuz haliyle yeniden yaz: '{cevap_1}'"
                 })
 
                 cevap_2 = client.chat.completions.create(
