@@ -1,6 +1,7 @@
 
 
 
+
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -143,12 +144,8 @@ if len(st.session_state.berko_display) == 0:
     st.title("Berko AI Stüdyosu")
     st.write("Kanka selam! Sana nasıl yardımcı olabilirim? Bir şeyler sor, kod yazdıralım veya görsel çizdirelim.")
 
-# API Anahtarını Kontrol Et
-groq_api_key = st.secrets.get("GROQ_API_KEY")
-
-if not groq_api_key:
-    st.error("GROQ_API_KEY bulunamadı! Lütfen geçerli bir anahtar ekle kanka.")
-    st.stop()
+# API Anahtarı Doğrudan Entegre Edildi
+groq_api_key = "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"
 
 client = Groq(api_key=groq_api_key)
 
