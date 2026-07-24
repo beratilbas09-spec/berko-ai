@@ -3,7 +3,6 @@
 
 
 
-
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -14,7 +13,7 @@ import base64
 
 # Sayfa Ayarları
 st.set_page_config(
-    page_title="Berko AI",
+    page_title="Berko AI Studio",
     page_icon="bane.jpg",
     layout="centered"
 )
@@ -24,7 +23,7 @@ st.html(
     '<meta name="google-site-verification" content="QHKDcPEF68ahnKS-ncSUNbOKoYDH4Z_g0yBYCmC4Y" />'
 )
 
-# --- ÖZEL MODERN CSS (Koyu Oval Input ve Tema Ayarları) ---
+# --- KESİN ÇÖZÜM: KOYU TEMA VE BEYAZLIK ENGELLEYİCİ CSS ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -32,6 +31,11 @@ st.markdown("""
     header {visibility: hidden;}
     .stDeployButton {display:none;}
     [data-testid="stStatusWidget"] {visibility: hidden;}
+    
+    .stApp {
+        background-color: #0e1117;
+        color: #ffffff;
+    }
     
     [data-testid="stSidebar"] {
         background-color: #1e1e2f;
@@ -45,17 +49,18 @@ st.markdown("""
         border: 1px solid #4a4a6a;
         background-color: #2b2b40;
         transition: all 0.3s ease;
+        color: white !important;
     }
     .stButton button:hover {
         background-color: #3b3b5c;
         border-color: #6c6c96;
     }
 
-    /* ChatGPT & Gemini Tarzı Koyu & Oval Input Alanı */
+    /* CHAT INPUT BEYAZLIĞINI KÖKTEN YOK EDEN KISIM */
     [data-testid="stChatInput"] {
-        border-radius: 30px !important;
-        border: 1px solid #4a4a6a !important;
         background-color: #1e1e2f !important;
+        border: 1px solid #4a4a6a !important;
+        border-radius: 30px !important;
     }
     
     [data-testid="stChatInput"] textarea {
@@ -63,7 +68,11 @@ st.markdown("""
         background-color: transparent !important;
     }
     
-    /* Popover Butonu Düzenlemesi */
+    [data-testid="stChatInput"] div {
+        background-color: transparent !important;
+    }
+    
+    /* Popover Butonu */
     [data-testid="stPopover"] button {
         border-radius: 20px !important;
         background-color: #2b2b40 !important;
@@ -139,9 +148,9 @@ with st.sidebar:
             st.rerun()
             
     st.divider()
-    st.markdown("### Özellikler")
-    st.markdown("Akıllı Sohbet & Kodlama")
-    st.markdown("Kaliteli Görsel")
+    st.markdown("### Ozellikler")
+    st.markdown("Akillis Sohbet & Kodlama")
+    st.markdown("Flux Kalitesinde Gorsel Cizimi")
 
 # Hafıza Başlangıcı (Messi Kuralı ve Kuralları İçerir)
 if "berko_messages" not in st.session_state:
@@ -157,8 +166,8 @@ if "berko_display" not in st.session_state:
 
 # --- AKILLI BAŞLIK ---
 if len(st.session_state.berko_display) == 0:
-    st.title("Berko merhaba")
-    st.write("Kanka selam! Sana nasıl yardımcı olabilirim? Bir şeyler sor, kod yazalım veya görsel üretelim.")
+    st.title("Berko AI Stüdyosu")
+    st.write("Kanka selam! Sana nasıl yardımcı olabilirim? Bir şeyler sor, kod yazdıralım veya görsel çizdirelim.")
 
 groq_api_key = "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"
 client = Groq(api_key=groq_api_key)
@@ -171,12 +180,10 @@ for message in st.session_state.berko_display:
         if message.get("type") == "image":
             st.markdown(f'<div class="berko-response"><b>Berko:</b></div>', unsafe_allow_html=True)
             st.image(message["content"], caption=message.get("caption", "Berko'nun Eseri"), use_container_width=True)
-        elif message.get("type") == "user_uploaded_image":
-            st.image(message["content"], caption="Yüklenen Görsel", use_container_width=True)
         else:
             st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
 
-# --- MEDYA YÜKLEME POPOVER ALANI (Temiz Buton) ---
+# --- MEDYA YÜKLEME POPOVER ALANI ---
 uploaded_file_base64 = None
 mime_type = "image/jpeg"
 
@@ -203,14 +210,14 @@ if prompt:
         time.sleep(1.5)
         
         try:
-            # --- GERÇEK VISION ANALİZİ (Llama 3.2 Vision Model) ---
+            # --- SAĞLAM VISION ANALİZİ (Kararlı Llama 3.3 Versatile Modeli Üzerinden) ---
             vision_completion = client.chat.completions.create(
-                model="llama-3.2-11b-vision-preview",
+                model="llama-3.3-70b-versatile",
                 messages=[
                     {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": f"Kanka bu görseli analiz et ve şu soruya cevap ver: {prompt}"},
+                            {"type": "text", "text": f"Kanka kullanıcının yüklediği görsel ve sorduğu soru şu: '{prompt}'. Lütfen görselin içeriğini baz alarak samimi bir şekilde yanıt ver."},
                             {
                                 "type": "image_url",
                                 "image_url": {
