@@ -3,6 +3,7 @@
 
 
 
+
 import streamlit as st
 from groq import Groq
 import urllib.parse
@@ -13,8 +14,8 @@ import base64
 
 # Sayfa Ayarları
 st.set_page_config(
-    page_title="Berko AI Studio",
-    page_icon="bane.jpeg",
+    page_title="Berko AI",
+    page_icon="bane.jpg",
     layout="centered"
 )
 
@@ -23,7 +24,7 @@ st.html(
     '<meta name="google-site-verification" content="QHKDcPEF68ahnKS-ncSUNbOKoYDH4Z_g0yBYCmC4Y" />'
 )
 
-# --- ÖZEL MODERN CSS (Oval Input, Sabit Alt Kısım ve Logo Gizleme) ---
+# --- ÖZEL MODERN CSS (Koyu Oval Input ve Tema Ayarları) ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -50,7 +51,7 @@ st.markdown("""
         border-color: #6c6c96;
     }
 
-    /* ChatGPT & Gemini Tarzı Oval Input Alanı */
+    /* ChatGPT & Gemini Tarzı Koyu & Oval Input Alanı */
     [data-testid="stChatInput"] {
         border-radius: 30px !important;
         border: 1px solid #4a4a6a !important;
@@ -59,17 +60,26 @@ st.markdown("""
     
     [data-testid="stChatInput"] textarea {
         color: #ffffff !important;
+        background-color: transparent !important;
+    }
+    
+    /* Popover Butonu Düzenlemesi */
+    [data-testid="stPopover"] button {
+        border-radius: 20px !important;
+        background-color: #2b2b40 !important;
+        border: 1px solid #4a4a6a !important;
+        color: white !important;
     }
 
     .user-bubble {
-        background-color: #f0f2f6;
-        color: #111111;
+        background-color: #2b2b40;
+        color: #ffffff;
         padding: 12px 18px;
         border-radius: 18px 18px 4px 18px;
         max-width: 75%;
         margin-left: auto;
         margin-bottom: 10px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.2);
         font-size: 15px;
         word-wrap: break-word;
     }
@@ -129,9 +139,9 @@ with st.sidebar:
             st.rerun()
             
     st.divider()
-    st.markdown("### Ozellikler")
-    st.markdown("Akillis Sohbet & Kodlama")
-    st.markdown("Flux Kalitesinde Gorsel Cizimi")
+    st.markdown("### Özellikler")
+    st.markdown("Akıllı Sohbet & Kodlama")
+    st.markdown("Kaliteli Görsel")
 
 # Hafıza Başlangıcı (Messi Kuralı ve Kuralları İçerir)
 if "berko_messages" not in st.session_state:
@@ -147,8 +157,8 @@ if "berko_display" not in st.session_state:
 
 # --- AKILLI BAŞLIK ---
 if len(st.session_state.berko_display) == 0:
-    st.title("Berko AI Stüdyosu")
-    st.write("Kanka selam! Sana nasıl yardımcı olabilirim? Bir şeyler sor, kod yazdıralım veya görsel çizdirelim.")
+    st.title("Berko merhaba")
+    st.write("Kanka selam! Sana nasıl yardımcı olabilirim? Bir şeyler sor, kod yazalım veya görsel üretelim.")
 
 groq_api_key = "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"
 client = Groq(api_key=groq_api_key)
@@ -161,58 +171,64 @@ for message in st.session_state.berko_display:
         if message.get("type") == "image":
             st.markdown(f'<div class="berko-response"><b>Berko:</b></div>', unsafe_allow_html=True)
             st.image(message["content"], caption=message.get("caption", "Berko'nun Eseri"), use_container_width=True)
+        elif message.get("type") == "user_uploaded_image":
+            st.image(message["content"], caption="Yüklenen Görsel", use_container_width=True)
         else:
             st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
 
-# --- MEDYA YÜKLEME POPOVER ALANI ---
+# --- MEDYA YÜKLEME POPOVER ALANI (Temiz Buton) ---
 uploaded_file_base64 = None
-media_type_str = "Metin"
+mime_type = "image/jpeg"
 
-with st.popover("➕ Medya Ekle"):
-    secim = st.radio("Tür:", ["Fotoğraf Yükle", "Video Yükle"], label_visibility="collapsed")
-    
-    uploaded_file = None
-    if secim == "Fotoğraf Yükle":
-        uploaded_file = st.file_uploader("Fotoğraf seç", type=["png", "jpg", "jpeg"])
-        media_type_str = "Fotoğraf"
-    else:
-        uploaded_file = st.file_uploader("Video seç", type=["mp4", "mov", "avi"])
-        media_type_str = "Video"
-        
+with st.popover("➕"):
+    uploaded_file = st.file_uploader("Görsel Yükle", type=["png", "jpg", "jpeg"])
     if uploaded_file is not None:
         file_bytes = uploaded_file.read()
         uploaded_file_base64 = base64.b64encode(file_bytes).decode("utf-8")
-        st.success("Yüklendi!")
+        if uploaded_file.type:
+            mime_type = uploaded_file.type
+        st.success("Fotoğraf yüklendi kanka!")
 
 # --- TEK VE EN ALTTA SABİT OVAL CHAT INPUT ---
 prompt = st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir...")
 
 if prompt:
     if uploaded_file_base64:
-        display_text = f"[{media_type_str} Yüklendi] {prompt}"
+        display_text = f"[Görsel Yüklendi] {prompt}"
         st.session_state.berko_display.append({"role": "user", "content": display_text})
         st.markdown(f'<div class="user-bubble">{display_text}</div>', unsafe_allow_html=True)
             
         thinking_placeholder = st.empty()
         thinking_placeholder.markdown('<div class="thinking-text">bkl biraz knk</div>', unsafe_allow_html=True)
-        time.sleep(1.8)
+        time.sleep(1.5)
         
         try:
-            analiz_istegi = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+            # --- GERÇEK VISION ANALİZİ (Llama 3.2 Vision Model) ---
+            vision_completion = client.chat.completions.create(
+                model="llama-3.2-11b-vision-preview",
                 messages=[
-                    {"role": "system", "content": "Kullanıcı medya yükledi. Durduk yere Berat İlbaş'tan bahsetme."},
-                    {"role": "user", "content": f"Medya hakkında soru/yorum: '{prompt}'"}
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": f"Kanka bu görseli analiz et ve şu soruya cevap ver: {prompt}"},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:{mime_type};base64,{uploaded_file_base64}"
+                                },
+                            },
+                        ],
+                    }
                 ],
                 temperature=0.7,
             )
-            cevap = analiz_istegi.choices[0].message.content
+            cevap = vision_completion.choices[0].message.content
             thinking_placeholder.empty()
             st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{cevap}</div>', unsafe_allow_html=True)
             st.session_state.berko_display.append({"role": "assistant", "content": cevap})
         except Exception as e:
             thinking_placeholder.empty()
-            st.error(f"Analiz hatası: {e}")
+            st.error(f"Görsel analiz hatası: {e}")
                     
     else:
         st.session_state.berko_messages.append({"role": "user", "content": prompt})
@@ -222,7 +238,7 @@ if prompt:
             
         thinking_placeholder = st.empty()
         thinking_placeholder.markdown('<div class="thinking-text">bkl biraz knk</div>', unsafe_allow_html=True)
-        time.sleep(1.8)
+        time.sleep(1.5)
         
         try:
             prompt_lower = prompt.lower()
