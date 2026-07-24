@@ -13,8 +13,8 @@ import base64
 
 # Sayfa Ayarları (Yüklediğin jpeg dosyasını buraya ekledik kanka)
 st.set_page_config(
-    page_title="Berko Ai",
-    page_icon="bane.jpg",
+    page_title="Berko AI Studio",
+    page_icon="bane.jpeg",
     layout="centered"
 )
 
