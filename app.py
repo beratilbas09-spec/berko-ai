@@ -1,9 +1,8 @@
 
 
-# Create a Python script to update app.py code for Streamlit dark/light theme fix
-# The user wants a light theme (white background) so they can see elements clearly.
+import re
 
-updated_code = '''import streamlit as st
+updated_code = """import streamlit as st
 from groq import Groq
 from openai import OpenAI
 import urllib.parse
@@ -27,7 +26,7 @@ st.markdown(
 )
 
 # --- CSS: BEYAZ / AÇIK TEMA KODLARI ---
-st.markdown("""
+st.markdown(\"\"\"
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -143,7 +142,7 @@ st.markdown("""
         justify-content: space-between;
     }
     </style>
-""", unsafe_allow_html=True)
+\"\"\", unsafe_allow_html=True)
 
 # Oturum Başlangıcı
 if "logged_in" not in st.session_state:
@@ -171,7 +170,7 @@ with st.sidebar:
             st.session_state.user_email = "berkouser@gmail.com" 
             st.rerun()
     else:
-        st.success(f"Giriş Yapıldı:\n{st.session_state.user_email}")
+        st.success(f"Giriş Yapıldı:\\n{st.session_state.user_email}")
         if st.button("Çıkış Yap", use_container_width=True):
             st.session_state.logged_in = False
             st.session_state.user_email = None
@@ -418,9 +417,12 @@ if prompt:
         except Exception as e:
             thinking_placeholder.empty()
             st.error(f"Hata oluştu: {e}")
-'''
+"""
+
+# Gizli boşluk karakterlerini (NBSP) temizle
+clean_code = re.sub(r'[\xa0\u200b]', ' ', updated_code)
 
 with open("app.py", "w", encoding="utf-8") as f:
-    f.write(updated_code)
+    f.write(clean_code)
 
-print("Code successfully updated with white theme CSS!")
+print("app.py başarıyla ve hatasız şekilde güncellendi!")
