@@ -171,7 +171,8 @@ if len(st.session_state.berko_display) == 0:
     st.write("Kanka selam! Sana nasıl yardımcı olabilirim?")
 
 # Groq Client
-groq_client = Groq(api_key="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")
+# DİKKAT: API anahtarını buraya yapıştır
+groq_client = Groq(api_key="gsk_YOUR_GROQ_API_KEY_HERE")
 
 # Geçmişi Yazdır
 for message in st.session_state.berko_display:
@@ -234,9 +235,9 @@ if prompt:
         thinking_placeholder.markdown('<div class="thinking-text">bkl biraz knk resme bakıyorum...</div>', unsafe_allow_html=True)
         
         try:
-            # Groq'un resmi Vision modeli
+            # Groq'un aktif LlaVa vizyon modeli
             response = groq_client.chat.completions.create(
-                model="llama-3.2-11b-vision-preview",
+                model="llava-v1.5-7b-4096-preview",
                 messages=[
                     {
                         "role": "system",
