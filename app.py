@@ -20,7 +20,6 @@ st.set_page_config(
 st.html(
     '<meta name="google-site-verification" content="QHKdEcPEF68ahnKS-ncSUNcbOKoYDH4Z_g0yBYCmc4Y" />'
 )
-)
 
 # --- CSS: BEYAZLIKLARI VE ÇİZGİLERİ SİL ---
 st.markdown("""
