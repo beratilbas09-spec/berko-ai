@@ -1,5 +1,4 @@
 
-
 import streamlit as st
 from groq import Groq
 from openai import OpenAI
@@ -16,9 +15,10 @@ st.set_page_config(
     layout="centered"
 )
 
-# Google Doğrulama Kodu
-st.html(
-    '<meta name="google-site-verification" content="QHKdEcPEF68ahnKS-ncSUNcbOKoYDH4Z_g0yBYCmc4Y" />'
+# Google Doğrulama Kodu (Botların okuyabilmesi için direkt HTML injection)
+st.markdown(
+    '<meta name="google-site-verification" content="QHKdEcPEF68ahnKS-ncSUNcbOKoYDH4Z_g0yBYCmc4Y" />',
+    unsafe_allow_html=True
 )
 
 # --- CSS: BEYAZLIKLARI VE ÇİZGİLERİ SİL ---
