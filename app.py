@@ -1,6 +1,9 @@
 
 
-import streamlit as st
+# Create a Python script to update app.py code for Streamlit dark/light theme fix
+# The user wants a light theme (white background) so they can see elements clearly.
+
+updated_code = '''import streamlit as st
 from groq import Groq
 from openai import OpenAI
 import urllib.parse
@@ -23,7 +26,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- CSS: BEYAZLIKLARI VE ÇİZGİLERİ SİL ---
+# --- CSS: BEYAZ / AÇIK TEMA KODLARI ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -32,38 +35,45 @@ st.markdown("""
     .stDeployButton {display:none;}
     [data-testid="stStatusWidget"] {visibility: hidden;}
     
+    /* Beyaz / Açık Arka Plan */
     .stApp {
-        background-color: #0e1117;
-        color: #ffffff;
+        background-color: #f8f9fa;
+        color: #212529;
     }
     
+    /* Sol Menü (Sidebar) Açık Tema */
     [data-testid="stSidebar"] {
-        background-color: #1e1e2f;
-        color: white;
+        background-color: #ffffff;
+        color: #212529;
+        border-right: 1px solid #e9ecef;
     }
     [data-testid="stSidebar"] * {
-        color: #ffffff !important;
+        color: #212529 !important;
     }
+    
+    /* Butonlar */
     .stButton button {
         border-radius: 8px;
-        border: 1px solid #4a4a6a;
-        background-color: #2b2b40;
+        border: 1px solid #ced4da;
+        background-color: #ffffff;
         transition: all 0.3s ease;
-        color: white !important;
+        color: #212529 !important;
     }
     .stButton button:hover {
-        background-color: #3b3b5c;
-        border-color: #6c6c96;
+        background-color: #e9ecef;
+        border-color: #adb5bd;
     }
 
+    /* Sohbet Giriş Kutusu */
     [data-testid="stChatInput"] {
-        background-color: #1e1e2f !important;
-        border: 1px solid #4a4a6a !important;
+        background-color: #ffffff !important;
+        border: 1px solid #ced4da !important;
         border-radius: 30px !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
     }
     
     [data-testid="stChatInput"] textarea {
-        color: #ffffff !important;
+        color: #212529 !important;
         background-color: transparent !important;
     }
     
@@ -72,32 +82,35 @@ st.markdown("""
     }
 
     [data-testid="stBottom"], [data-testid="stBottomBlockContainer"] {
-        background-color: #0e1117 !important;
+        background-color: #f8f9fa !important;
     }
     
+    /* Popover */
     [data-testid="stPopover"] button {
         border-radius: 20px !important;
-        background-color: #2b2b40 !important;
-        border: 1px solid #4a4a6a !important;
-        color: white !important;
+        background-color: #ffffff !important;
+        border: 1px solid #ced4da !important;
+        color: #212529 !important;
     }
 
+    /* Kullanıcı Baloncuğu */
     .user-bubble {
-        background-color: #2b2b40;
+        background-color: #0d6efd;
         color: #ffffff;
         padding: 12px 18px;
         border-radius: 18px 18px 4px 18px;
         max-width: 75%;
         margin-left: auto;
         margin-bottom: 10px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         font-size: 15px;
         word-wrap: break-word;
     }
 
+    /* Berko Yanıtı */
     .berko-response {
         background-color: transparent;
-        color: inherit;
+        color: #212529;
         padding: 8px 0px;
         max-width: 85%;
         margin-right: auto;
@@ -107,7 +120,7 @@ st.markdown("""
     }
 
     .thinking-text {
-        color: #888888;
+        color: #6c757d;
         font-style: italic;
         font-size: 14px;
         margin-bottom: 15px;
@@ -120,8 +133,8 @@ st.markdown("""
     }
     
     .img-preview-container {
-        background-color: #1e1e2f;
-        border: 1px solid #4a4a6a;
+        background-color: #ffffff;
+        border: 1px solid #ced4da;
         border-radius: 12px;
         padding: 8px 12px;
         margin-bottom: 8px;
@@ -148,18 +161,18 @@ if "shared_files" not in st.session_state:
 
 with st.sidebar:
     st.title("Berko AI")
-    st.caption("Yapay Zeka Asistanin")
+    st.caption("Yapay Zeka Asistanın")
     st.divider()
     
     if not st.session_state.logged_in:
-        st.info("Gecmis sohbetler ve kisiseellestirilmis deneyim icin giris yap.")
-        if st.button("Google ile Giris Yap", use_container_width=True):
+        st.info("Geçmiş sohbetler ve kişiselleştirilmiş deneyim için giriş yap.")
+        if st.button("Google ile Giriş Yap", use_container_width=True):
             st.session_state.logged_in = True
             st.session_state.user_email = "berkouser@gmail.com" 
             st.rerun()
     else:
-        st.success(f"Giris Yapildi:\n{st.session_state.user_email}")
-        if st.button("Cikis Yap", use_container_width=True):
+        st.success(f"Giriş Yapıldı:\n{st.session_state.user_email}")
+        if st.button("Çıkış Yap", use_container_width=True):
             st.session_state.logged_in = False
             st.session_state.user_email = None
             st.session_state.berko_messages = [] 
@@ -176,7 +189,6 @@ with st.sidebar:
     new_shared_file = st.file_uploader("Sitemize Dosya Ekle", key="sidebar_file_uploader")
     if new_shared_file is not None:
         file_bytes = new_shared_file.read()
-        # Zaten eklenmiş mi kontrol et
         if not any(f['name'] == new_shared_file.name for f in st.session_state.shared_files):
             st.session_state.shared_files.append({
                 "name": new_shared_file.name,
@@ -205,9 +217,9 @@ with st.sidebar:
         st.caption("Henüz yüklenmiş dosya yok.")
 
     st.divider()
-    st.markdown("### Ozellikler")
-    st.markdown("Akillis Sohbet & Kodlama")
-    st.markdown("Flux Kalitesinde Gorsel Cizimi")
+    st.markdown("### Özellikler")
+    st.markdown("• Akıllı Sohbet & Kodlama")
+    st.markdown("• Flux Kalitesinde Görsel Çizimi")
 
 # Hafıza
 if "berko_messages" not in st.session_state:
@@ -247,7 +259,6 @@ for idx, message in enumerate(st.session_state.berko_display):
             st.markdown(f'<div class="berko-response"><b>Berko:</b></div>', unsafe_allow_html=True)
             st.image(message["content"], caption=message.get("caption", "Berko'nun Eseri"), use_container_width=True)
             
-            # --- ÜRETİLEN RESMİ İNDİRME BUTONU ---
             if message.get("image_bytes"):
                 st.download_button(
                     label="📥 Görseli İndir",
@@ -273,7 +284,7 @@ with st.popover("➕ Görsel Ekle"):
         }
         st.success("Fotoğraf eklendi!")
 
-# Sohbet Girişinin Üstünde Yüklenen Görsel Önizleme Ve Çarpı Butonu
+# Sohbet Girişinin Üstünde Yüklenen Görsel Önizleme
 if st.session_state.uploaded_image is not None:
     col1, col2 = st.columns([4, 1])
     with col1:
@@ -286,7 +297,6 @@ if st.session_state.uploaded_image is not None:
 prompt = st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir...")
 
 if prompt:
-    # 1. DURUM: KULLANICI GÖRSEL YÜKLEDİYSE (VISION ANALİZİ)
     if st.session_state.uploaded_image is not None:
         current_img = st.session_state.uploaded_image
         
@@ -337,7 +347,6 @@ if prompt:
             thinking_placeholder.empty()
             st.error(f"Görsel analiz hatası: {e}")
                     
-    # 2. DURUM: SADECE METİN VEYA RESİM ÇİZDİRME İSTEĞİ
     else:
         st.session_state.berko_messages.append({"role": "user", "content": prompt})
         st.session_state.berko_display.append({"role": "user", "content": prompt})
@@ -380,12 +389,10 @@ if prompt:
                 encoded_prompt = urllib.parse.quote(gelismis_ingilizce_prompt)
                 image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1280&height=720&model=flux-realism&nologo=true&seed={int(time.time())}"
                 
-                # Resmi indirip veriyi kaydet (indirme butonu için)
                 img_data = requests.get(image_url).content
                 
                 st.image(image_url, caption=f"Berko'nun Eseri: {prompt}", use_container_width=True)
                 
-                # İndirme Butonunu Göster
                 st.download_button(
                     label="📥 Görseli İndir",
                     data=img_data,
@@ -411,3 +418,9 @@ if prompt:
         except Exception as e:
             thinking_placeholder.empty()
             st.error(f"Hata oluştu: {e}")
+'''
+
+with open("app.py", "w", encoding="utf-8") as f:
+    f.write(updated_code)
+
+print("Code successfully updated with white theme CSS!")
