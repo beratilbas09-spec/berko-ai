@@ -2,6 +2,7 @@
 
 import streamlit as st
 from groq import Groq
+from openai import OpenAI
 import urllib.parse
 import time
 from PIL import Image
@@ -115,6 +116,18 @@ st.markdown("""
         50% { opacity: 1; }
         100% { opacity: 0.4; }
     }
+    
+    /* Önizleme Kartı Stili */
+    .img-preview-container {
+        background-color: #1e1e2f;
+        border: 1px solid #4a4a6a;
+        border-radius: 12px;
+        padding: 8px 12px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -170,9 +183,13 @@ if len(st.session_state.berko_display) == 0:
     st.title("Berko AI Stüdyosu")
     st.write("Kanka selam! Sana nasıl yardımcı olabilirim?")
 
-# Groq Client
-# DİKKAT: API anahtarını buraya yapıştır
-groq_client = Groq(api_key="gsk_YOUR_GROQ_API_KEY_HERE")
+# API Müşterileri
+groq_client = Groq(api_key="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")
+
+openrouter_client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key="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",
+)
 
 # Geçmişi Yazdır
 for message in st.session_state.berko_display:
@@ -190,7 +207,7 @@ for message in st.session_state.berko_display:
         else:
             st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
 
-# Görsel Seçme Alanı (➕)
+# Visual/Pop-over Görsel Yükleme Alanı
 with st.popover("➕ Görsel Ekle"):
     uploaded_file = st.file_uploader("Görsel Yükle", type=["png", "jpg", "jpeg"], key="popover_uploader")
     if uploaded_file is not None:
@@ -204,11 +221,11 @@ with st.popover("➕ Görsel Ekle"):
         }
         st.success("Fotoğraf eklendi!")
 
-# Seçilen Görsel Önizlemesi Ve İptal/Kaldır Butonu
+# Sohbet Girişinin Üstünde Yüklenen Görsel Önizleme Ve Çarpı Butonu
 if st.session_state.uploaded_image is not None:
     col1, col2 = st.columns([4, 1])
     with col1:
-        st.image(st.session_state.uploaded_image["bytes"], caption=f"Seçilen: {st.session_state.uploaded_image['name']}", width=120)
+        st.image(st.session_state.uploaded_image["bytes"], caption=f"Seçilen Görsel: {st.session_state.uploaded_image['name']}", width=120)
     with col2:
         if st.button("❌ Kaldır", key="remove_img"):
             st.session_state.uploaded_image = None
@@ -217,7 +234,7 @@ if st.session_state.uploaded_image is not None:
 prompt = st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir...")
 
 if prompt:
-    # 1. DURUM: GÖRSEL ANALİZİ (GROQ VISION KULLANILIR)
+    # 1. DURUM: KULLANICI GÖRSEL YÜKLEDİYSE (VISION ANALİZİ)
     if st.session_state.uploaded_image is not None:
         current_img = st.session_state.uploaded_image
         
@@ -235,13 +252,12 @@ if prompt:
         thinking_placeholder.markdown('<div class="thinking-text">bkl biraz knk resme bakıyorum...</div>', unsafe_allow_html=True)
         
         try:
-            # Groq'un aktif LlaVa vizyon modeli
-            response = groq_client.chat.completions.create(
-                model="llava-v1.5-7b-4096-preview",
+            response = openrouter_client.chat.completions.create(
+                model="google/gemini-2.0-flash-exp:free",
                 messages=[
                     {
                         "role": "system",
-                        "content": "Sen Berko adında samimi, kanka gibi konuşan bir AI asistanısın. Asla iç ses veya analiz adımları yazma. Doğrudan Türkçe kanka tarzında samimi cevap ver."
+                        "content": "Sen Berko adında samimi, kanka gibi konuşan bir AI asistanısın. Asla iç ses, analiz adımları yazma. Doğrudan Türkçe kanka tarzında cevap ver."
                     },
                     {
                         "role": "user",
@@ -256,15 +272,13 @@ if prompt:
                         ],
                     }
                 ],
-                temperature=0.7,
-                max_tokens=1024
             )
             cevap = response.choices[0].message.content
             thinking_placeholder.empty()
             st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{cevap}</div>', unsafe_allow_html=True)
             st.session_state.berko_display.append({"role": "assistant", "content": cevap})
             
-            # İşlem tamamlanınca görsel seçimini temizle
+            # İşlem bittiğinde görsel seçimini temizle
             st.session_state.uploaded_image = None
             st.rerun()
 
@@ -272,7 +286,7 @@ if prompt:
             thinking_placeholder.empty()
             st.error(f"Görsel analiz hatası: {e}")
                     
-    # 2. DURUM: NORMAL SOHBET VEYA RESİM ÇİZDİRME
+    # 2. DURUM: SADECE METİN VEYA RESİM ÇİZDİRME İSTEĞİ
     else:
         st.session_state.berko_messages.append({"role": "user", "content": prompt})
         st.session_state.berko_display.append({"role": "user", "content": prompt})
