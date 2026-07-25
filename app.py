@@ -18,7 +18,8 @@ st.set_page_config(
 
 # Google Doğrulama Kodu
 st.html(
-    '<meta name="google-site-verification" content="QHKDcPEF68ahnKS-ncSUNbOKoYDH4Z_g0yBYCmC4Y" />'
+    '<meta name="google-site-verification" content="QHKdEcPEF68ahnKS-ncSUNcbOKoYDH4Z_g0yBYCmc4Y" />'
+)
 )
 
 # --- CSS: BEYAZLIKLARI VE ÇİZGİLERİ SİL ---
