@@ -1,4 +1,5 @@
 
+
 import streamlit as st
 from groq import Groq
 from openai import OpenAI
@@ -115,6 +116,18 @@ st.markdown("""
         50% { opacity: 1; }
         100% { opacity: 0.4; }
     }
+    
+    /* Önizleme Kartı Stili */
+    .img-preview-container {
+        background-color: #1e1e2f;
+        border: 1px solid #4a4a6a;
+        border-radius: 12px;
+        padding: 8px 12px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -124,6 +137,9 @@ if "logged_in" not in st.session_state:
 
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
+
+if "uploaded_image" not in st.session_state:
+    st.session_state.uploaded_image = None
 
 with st.sidebar:
     st.title("Berko AI")
@@ -143,6 +159,7 @@ with st.sidebar:
             st.session_state.user_email = None
             st.session_state.berko_messages = [] 
             st.session_state.berko_display = []
+            st.session_state.uploaded_image = None
             st.rerun()
             
     st.divider()
@@ -190,40 +207,51 @@ for message in st.session_state.berko_display:
         else:
             st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
 
-# Görsel Yükleme
-uploaded_file_base64 = None
-mime_type = "image/jpeg"
-uploaded_raw_bytes = None
-
-with st.popover("➕"):
-    uploaded_file = st.file_uploader("Görsel Yükle", type=["png", "jpg", "jpeg"])
+# Visual/Pop-over Görsel Yükleme Alanı
+with st.popover("➕ Görsel Ekle"):
+    uploaded_file = st.file_uploader("Görsel Yükle", type=["png", "jpg", "jpeg"], key="popover_uploader")
     if uploaded_file is not None:
-        uploaded_raw_bytes = uploaded_file.read()
-        uploaded_file_base64 = base64.b64encode(uploaded_raw_bytes).decode("utf-8")
-        if uploaded_file.type:
-            mime_type = uploaded_file.type
-        st.success("Fotoğraf yüklendi kanka!")
+        raw_bytes = uploaded_file.read()
+        b64 = base64.b64encode(raw_bytes).decode("utf-8")
+        st.session_state.uploaded_image = {
+            "bytes": raw_bytes,
+            "b64": b64,
+            "mime": uploaded_file.type or "image/jpeg",
+            "name": uploaded_file.name
+        }
+        st.success("Fotoğraf eklendi!")
+
+# Sohbet Girişinin Üstünde Yüklenen Görsel Önizleme Ve Çarpı Butonu
+if st.session_state.uploaded_image is not None:
+    col1, col2 = st.columns([4, 1])
+    with col1:
+        st.image(st.session_state.uploaded_image["bytes"], caption=f"Seçilen Görsel: {st.session_state.uploaded_image['name']}", width=120)
+    with col2:
+        if st.button("❌ Kaldır", key="remove_img"):
+            st.session_state.uploaded_image = None
+            st.rerun()
 
 prompt = st.chat_input("Berko'ya bir şeyler yaz veya resim çizdir...")
 
 if prompt:
-    if uploaded_file_base64:
-        st.image(uploaded_raw_bytes, caption="Yüklenen Görsel", width=300)
+    # 1. DURUM: KULLANICI GÖRSEL YÜKLEDİYSE (VISION ANALİZİ)
+    if st.session_state.uploaded_image is not None:
+        current_img = st.session_state.uploaded_image
+        
+        st.image(current_img["bytes"], caption="Yüklenen Görsel", width=300)
         st.markdown(f'<div class="user-bubble">{prompt}</div>', unsafe_allow_html=True)
         
         st.session_state.berko_display.append({
             "role": "user", 
             "type": "user_image", 
-            "content": uploaded_raw_bytes, 
+            "content": current_img["bytes"], 
             "text": prompt
         })
             
         thinking_placeholder = st.empty()
-        thinking_placeholder.markdown('<div class="thinking-text">bkl biraz knk</div>', unsafe_allow_html=True)
-        time.sleep(1)
+        thinking_placeholder.markdown('<div class="thinking-text">bkl biraz knk resme bakıyorum...</div>', unsafe_allow_html=True)
         
         try:
-            # OPENROUTER RESMİ VE SONTÜM AKTİF MODELİ
             response = openrouter_client.chat.completions.create(
                 model="google/gemini-2.0-flash-exp:free",
                 messages=[
@@ -238,7 +266,7 @@ if prompt:
                             {
                                 "type": "image_url",
                                 "image_url": {
-                                    "url": f"data:{mime_type};base64,{uploaded_file_base64}"
+                                    "url": f"data:{current_img['mime']};base64,{current_img['b64']}"
                                 },
                             },
                         ],
@@ -249,10 +277,16 @@ if prompt:
             thinking_placeholder.empty()
             st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{cevap}</div>', unsafe_allow_html=True)
             st.session_state.berko_display.append({"role": "assistant", "content": cevap})
+            
+            # İşlem bittiğinde görsel seçimini temizle
+            st.session_state.uploaded_image = None
+            st.rerun()
+
         except Exception as e:
             thinking_placeholder.empty()
             st.error(f"Görsel analiz hatası: {e}")
                     
+    # 2. DURUM: SADECE METİN VEYA RESİM ÇİZDİRME İSTEĞİ
     else:
         st.session_state.berko_messages.append({"role": "user", "content": prompt})
         st.session_state.berko_display.append({"role": "user", "content": prompt})
@@ -261,7 +295,7 @@ if prompt:
             
         thinking_placeholder = st.empty()
         thinking_placeholder.markdown('<div class="thinking-text">bkl biraz knk</div>', unsafe_allow_html=True)
-        time.sleep(1)
+        time.sleep(0.5)
         
         try:
             prompt_lower = prompt.lower()
