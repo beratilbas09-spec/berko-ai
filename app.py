@@ -4,11 +4,8 @@ import re
 
 updated_code = """import streamlit as st
 from groq import Groq
-from openai import OpenAI
 import urllib.parse
 import time
-from PIL import Image
-import io
 import base64
 import requests
 
@@ -25,50 +22,66 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- CSS: BEYAZ / AÇIK TEMA KODLARI ---
+# --- CSS: TERTEMİZ AÇIK TEMA VE TÜM STREAMLIT/GITHUB İKONLARINI GİZLEME ---
 st.markdown(\"\"\"
     <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    .stDeployButton {display:none;}
-    [data-testid="stStatusWidget"] {visibility: hidden;}
+    /* Streamlit Üst/Alt Menü ve GitHub Butonlarını Gizle */
+    #MainMenu {visibility: hidden !important;}
+    footer {visibility: hidden !important;}
+    header {visibility: hidden !important;}
+    .stDeployButton {display: none !important;}
+    [data-testid="stStatusWidget"] {visibility: hidden !important;}
+    [data-testid="stToolbar"] {visibility: hidden !important;}
+    [data-testid="stHeader"] {display: none !important;}
+    .viewerBadge_container__1613n {display: none !important;}
     
-    /* Beyaz / Açık Arka Plan */
-    .stApp {
-        background-color: #f8f9fa;
-        color: #212529;
+    /* Genel Arka Plan ve Yazı Rengi */
+    html, body, [data-testid="stAppViewContainer"], .stApp {
+        background-color: #f8f9fa !important;
+        color: #212529 !important;
     }
-    
+
     /* Sol Menü (Sidebar) Açık Tema */
     [data-testid="stSidebar"] {
-        background-color: #ffffff;
-        color: #212529;
-        border-right: 1px solid #e9ecef;
+        background-color: #ffffff !important;
+        color: #212529 !important;
+        border-right: 1px solid #e9ecef !important;
     }
     [data-testid="stSidebar"] * {
         color: #212529 !important;
     }
-    
+
+    /* Input ve Uploader Kutularındaki Siyahlıkları Düzenle */
+    input, textarea, select, [data-baseweb="input"], [data-testid="stFileUploader"] {
+        background-color: #ffffff !important;
+        color: #212529 !important;
+        border-color: #ced4da !important;
+    }
+
+    [data-testid="stFileUploader"] section {
+        background-color: #f8f9fa !important;
+        border: 1px dashed #ced4da !important;
+    }
+
     /* Butonlar */
     .stButton button {
-        border-radius: 8px;
-        border: 1px solid #ced4da;
-        background-color: #ffffff;
-        transition: all 0.3s ease;
+        border-radius: 8px !important;
+        border: 1px solid #ced4da !important;
+        background-color: #ffffff !important;
+        transition: all 0.3s ease !important;
         color: #212529 !important;
     }
     .stButton button:hover {
-        background-color: #e9ecef;
-        border-color: #adb5bd;
+        background-color: #e9ecef !important;
+        border-color: #adb5bd !important;
     }
 
-    /* Sohbet Giriş Kutusu */
+    /* Sohbet Giriş Kutusu ve Alt Taraf */
     [data-testid="stChatInput"] {
         background-color: #ffffff !important;
         border: 1px solid #ced4da !important;
         border-radius: 30px !important;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important;
     }
     
     [data-testid="stChatInput"] textarea {
@@ -83,7 +96,7 @@ st.markdown(\"\"\"
     [data-testid="stBottom"], [data-testid="stBottomBlockContainer"] {
         background-color: #f8f9fa !important;
     }
-    
+
     /* Popover */
     [data-testid="stPopover"] button {
         border-radius: 20px !important;
@@ -130,17 +143,6 @@ st.markdown(\"\"\"
         50% { opacity: 1; }
         100% { opacity: 0.4; }
     }
-    
-    .img-preview-container {
-        background-color: #ffffff;
-        border: 1px solid #ced4da;
-        border-radius: 12px;
-        padding: 8px 12px;
-        margin-bottom: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
     </style>
 \"\"\", unsafe_allow_html=True)
 
@@ -154,7 +156,6 @@ if "user_email" not in st.session_state:
 if "uploaded_image" not in st.session_state:
     st.session_state.uploaded_image = None
 
-# Dosya Deposu Hafızası
 if "shared_files" not in st.session_state:
     st.session_state.shared_files = []
 
@@ -236,13 +237,8 @@ if len(st.session_state.berko_display) == 0:
     st.title("Berko AI Stüdyosu")
     st.write("Kanka selam! Sana nasıl yardımcı olabilirim?")
 
-# API Müşterileri
+# API Müşterisi (Groq tek başına hem sohbet, hem görsel okuma, hem prompt çevirme hallediyor)
 groq_client = Groq(api_key="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")
-
-openrouter_client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key="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",
-)
 
 # Geçmişi Yazdır
 for idx, message in enumerate(st.session_state.berko_display):
@@ -269,7 +265,7 @@ for idx, message in enumerate(st.session_state.berko_display):
         else:
             st.markdown(f'<div class="berko-response"><b>Berko:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
 
-# Visual/Pop-over Görsel Yükleme Alanı
+# Görsel Yükleme Popover
 with st.popover("➕ Görsel Ekle"):
     uploaded_file = st.file_uploader("Görsel Yükle", type=["png", "jpg", "jpeg"], key="popover_uploader")
     if uploaded_file is not None:
@@ -283,7 +279,7 @@ with st.popover("➕ Görsel Ekle"):
         }
         st.success("Fotoğraf eklendi!")
 
-# Sohbet Girişinin Üstünde Yüklenen Görsel Önizleme
+# Önizleme
 if st.session_state.uploaded_image is not None:
     col1, col2 = st.columns([4, 1])
     with col1:
@@ -313,12 +309,13 @@ if prompt:
         thinking_placeholder.markdown('<div class="thinking-text">bkl biraz knk resme bakıyorum...</div>', unsafe_allow_html=True)
         
         try:
-            response = openrouter_client.chat.completions.create(
-                model="google/gemini-2.0-flash-exp:free",
+            # Görsel okuma Groq llama-3.2-11b-vision-preview üzerinden sorunsuz yapılıyor
+            response = groq_client.chat.completions.create(
+                model="llama-3.2-11b-vision-preview",
                 messages=[
                     {
                         "role": "system",
-                        "content": "Sen Berko adında samimi, kanka gibi konuşan bir AI asistanısın. Asla iç ses, analiz adımları yazma. Doğrudan Türkçe kanka tarzında cevap ver."
+                        "content": "Sen Berko adında samimi, kanka gibi konuşan bir AI asistanısın. Görseli inceleyip doğrudan Türkçe samimi kanka tarzında cevap ver."
                     },
                     {
                         "role": "user",
@@ -419,10 +416,10 @@ if prompt:
             st.error(f"Hata oluştu: {e}")
 """
 
-# Gizli boşluk karakterlerini (NBSP) temizle
+# NBSP / Gizli Karakterleri Temizle
 clean_code = re.sub(r'[\xa0\u200b]', ' ', updated_code)
 
 with open("app.py", "w", encoding="utf-8") as f:
     f.write(clean_code)
 
-print("app.py başarıyla ve hatasız şekilde güncellendi!")
+print("Tamamdır kanka! app.py hatasız, temiz ve tam performansla güncellendi.")
